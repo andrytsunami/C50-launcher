@@ -11,7 +11,7 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:label="Тюмень Home"
+        android:label="ProjectorHome"
         android:theme="@style/AppTheme"
         android:supportsRtl="true">
         <activity
