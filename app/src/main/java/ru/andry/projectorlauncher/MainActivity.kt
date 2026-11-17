@@ -205,7 +205,13 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Настройки рабочего стола")
             .setItems(arrayOf("Выбрать 4 приложения в док", "Изменить фон")) { _, which ->
-                if (which == 0) chooseFavorite(0) else chooseBackground()
+                if (which == 0) {
+                    AlertDialog.Builder(this)
+                        .setTitle("Какую позицию изменить?")
+                        .setItems(arrayOf("1", "2", "3", "4")) { _, slot -> chooseFavorite(slot) }
+                        .setNegativeButton("Отмена", null)
+                        .show()
+                } else chooseBackground()
             }
             .setNegativeButton("Закрыть", null)
             .show()
@@ -251,7 +257,7 @@ class MainActivity : Activity() {
 
     private fun pillBackground() = GradientDrawable().apply {
         cornerRadius = dp(24).toFloat()
-        setColor(0x443FFFFFF)
+        setColor(0x443FFFFF)
         setStroke(dp(1), 0x99FFFFFF.toInt())
     }
 
