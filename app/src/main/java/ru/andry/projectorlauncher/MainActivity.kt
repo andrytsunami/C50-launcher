@@ -132,13 +132,10 @@ class MainActivity : Activity() {
         top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
 
         val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
-        network = TextView(this).apply {
-            textSize = 22f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(dp(12), dp(8), dp(12), dp(8))
+        network = NetworkIconsView(this).apply {
+            contentDescription = "Состояние Wi-Fi и Bluetooth"
             background = rounded(0x88202C50.toInt(), 20, 0x66FFFFFF.toInt(), 1)
-            isFocusable = true
+            setPadding(dp(12), dp(8), dp(12), dp(8))
         }
         val settings = focusButton("⚙") { showSettings() }.apply {
             textSize = 28f
@@ -151,7 +148,7 @@ class MainActivity : Activity() {
         content.addView(top)
 
         val spacer = Space(this)
-        content.addView(spacer, LinearLayout.LayoutParams(1, 0, 1f))
+        content.addView(spacer, LinearLayout.LayoutParams(1, 0, 2f))
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
