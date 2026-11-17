@@ -2,19 +2,18 @@ package ru.andry.projectorlauncher
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.bluetooth.BluetoothAdapter
+import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
+import android.graphics.*
 import android.graphics.drawable.GradientDrawable
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
-import android.widget.GridLayout
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import android.widget.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,25 +23,21 @@ class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("launcher", MODE_PRIVATE) }
     private lateinit var clock: TextView
     private lateinit var date: TextView
-    private lateinit var root: LinearLayout
+    private lateinit var network: TextView
+    private lateinit var root: FrameLayout
     private var apps: List<AppEntry> = emptyList()
-    private val backgrounds = listOf(
-        intArrayOf(0xFF120B35.toInt(), 0xFFB51D72.toInt(), 0xFF071B54.toInt()),
-        intArrayOf(0xFF071B2B.toInt(), 0xFF087E8B.toInt(), 0xFF101820.toInt()),
-        intArrayOf(0xFF24112F.toInt(), 0xFF8F3B76.toInt(), 0xFFF0A35E.toInt()),
-        intArrayOf(0xFF101820.toInt(), 0xFF34495E.toInt(), 0xFF05080D.toInt())
-    )
-    private val backgroundNames = listOf("Неон", "Океан", "Закат", "Графит")
-    private val refreshClock = object : Runnable {
+
+    data class AppEntry(val label: String, val icon: android.graphics.drawable.Drawable, val pkg: String)
+
+    private val clockTick = object : Runnable {
         override fun run() {
             val now = Date()
             clock.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
-            date.text = SimpleDateFormat("EEEE, d MMMM", Locale("ru")).format(now)
+            date.text = SimpleDateFormat("EEEE\nd MMMM", Locale("ru")).format(now)
+            updateNetwork()
             handler.postDelayed(this, 30_000)
         }
     }
-
-    data class AppEntry(val label: String, val icon: android.graphics.drawable.Drawable, val pkg: String)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,11 +49,11 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::clock.isInitialized) handler.post(refreshClock)
+        if (::clock.isInitialized) handler.post(clockTick)
     }
 
     override fun onPause() {
-        handler.removeCallbacks(refreshClock)
+        handler.removeCallbacks(clockTick)
         super.onPause()
     }
 
@@ -73,75 +68,109 @@ class MainActivity : Activity() {
         }.distinctBy { it.pkg }.sortedBy { it.label.lowercase(Locale.getDefault()) }
     }
 
-    private fun favoritePackages(): MutableList<String> {
+    private fun favorites(): MutableList<String> {
         val saved = prefs.getString("favorites", null)
         if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(4).toMutableList()
         return apps.take(4).map { it.pkg }.toMutableList()
     }
 
     private fun buildHome() {
-        root = LinearLayout(this).apply {
+        root = FrameLayout(this)
+        val wallpaper = TyumenWallpaper(this, prefs.getInt("wallpaper", 0))
+        root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
+
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(38), dp(20), dp(38), dp(18))
-            background = backgroundDrawable()
+            setPadding(dp(34), dp(22), dp(34), dp(18))
         }
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        header.addView(TextView(this).apply {
-            text = "ДОБРЫЙ ДЕНЬ"
-            textSize = 16f
-            letterSpacing = 0.12f
-            setTextColor(Color.WHITE)
-        }, LinearLayout.LayoutParams(0, dp(34), 1f))
+        root.addView(content, FrameLayout.LayoutParams(-1, -1))
+
+        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
+        val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val timeRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         clock = TextView(this).apply {
-            textSize = 31f
-            typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            text = "00:00"
+            textSize = 52f
+            typeface = android.graphics.Typeface.create("sans-serif-light", 0)
             setTextColor(Color.WHITE)
+            background = rounded(0xCC101A35.toInt(), 16, 0xAAFFFFFF.toInt(), 1)
+            setPadding(dp(15), dp(0), dp(15), dp(4))
+            elevation = dp(5).toFloat()
         }
         date = TextView(this).apply {
-            textSize = 13f
-            setTextColor(0xFFE8E5F5.toInt())
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(12), 0, dp(18), 0)
-        }
-        header.addView(clock)
-        header.addView(date)
-        header.addView(TextView(this).apply {
-            text = "⚙  Настроить"
-            textSize = 15f
-            gravity = Gravity.CENTER
+            textSize = 18f
             setTextColor(Color.WHITE)
-            background = pillBackground()
-            isFocusable = true
-            setPadding(dp(18), dp(8), dp(18), dp(8))
-            setOnClickListener { showSettings() }
-        })
-        root.addView(header)
+            setPadding(dp(18), 0, 0, 0)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        timeRow.addView(clock)
+        timeRow.addView(date)
+        left.addView(timeRow)
 
-        root.addView(sectionTitle("Избранное"))
-        val dock = GridLayout(this).apply { columnCount = 4; useDefaultMargins = false }
-        val favorites = favoritePackages()
-        for (i in 0 until 4) {
-            val app = apps.firstOrNull { it.pkg == favorites.getOrNull(i) }
-            dock.addView(appTile(app, true) {
-                if (app != null) launch(app.pkg) else chooseFavorite(i)
-            }, GridLayout.LayoutParams().apply {
-                width = 0; height = dp(112)
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                setMargins(dp(5), dp(3), dp(5), dp(3))
+        val weather = TextView(this).apply {
+            text = "☀  ТЮМЕНЬ\n     Погода подключается"
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            background = rounded(0x99202C50.toInt(), 14, 0x66FFFFFF.toInt(), 1)
+            setPadding(dp(14), dp(9), dp(18), dp(9))
+            setMargins(top = 12)
+        }
+        left.addView(weather)
+        top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
+
+        val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
+        network = TextView(this).apply {
+            textSize = 22f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = rounded(0x88202C50.toInt(), 20, 0x66FFFFFF.toInt(), 1)
+            isFocusable = true
+        }
+        val settings = focusButton("⚙") { showSettings() }.apply {
+            textSize = 28f
+            contentDescription = "Настройки"
+            setPadding(dp(17), dp(7), dp(17), dp(7))
+        }
+        right.addView(network)
+        right.addView(settings, LinearLayout.LayoutParams(-2, -2).apply { leftMargin = dp(10) })
+        top.addView(right)
+        content.addView(top)
+
+        val spacer = Space(this)
+        content.addView(spacer, LinearLayout.LayoutParams(1, 0, 1f))
+
+        val dock = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = rounded(0xDD09152F.toInt(), 24, 0xCC8FCBFF.toInt(), 2)
+            setPadding(dp(10), dp(9), dp(10), dp(9))
+            elevation = dp(12).toFloat()
+        }
+        val selected = favorites()
+        for (slot in 0..3) {
+            val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
+            val tile = appTile(app, true) {
+                if (app != null) launch(app.pkg) else chooseDockApp(slot)
+            }
+            dock.addView(tile, LinearLayout.LayoutParams(0, dp(104), 1f).apply {
+                leftMargin = dp(5); rightMargin = dp(5)
             })
         }
-        root.addView(dock, LinearLayout.LayoutParams(-1, dp(120)))
+        content.addView(dock, LinearLayout.LayoutParams(-1, dp(124)))
 
-        root.addView(sectionTitle("Все приложения"))
-        val favoriteSet = favorites.toSet()
-        val rest = apps.filter { it.pkg !in favoriteSet }
-        val grid = GridLayout(this).apply { columnCount = 5; useDefaultMargins = false }
+        val allTitle = TextView(this).apply {
+            text = "ВСЕ ПРИЛОЖЕНИЯ  ↓"
+            textSize = 14f
+            setTextColor(0xFFEAF3FF.toInt())
+            setPadding(dp(4), dp(12), 0, dp(5))
+        }
+        content.addView(allTitle)
+        val rest = apps.filter { it.pkg !in selected }
+        val grid = GridLayout(this).apply { columnCount = 6; useDefaultMargins = false }
         rest.forEach { app ->
             grid.addView(appTile(app, false) { launch(app.pkg) }, GridLayout.LayoutParams().apply {
-                width = 0; height = dp(105)
+                width = 0; height = dp(86)
                 columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
                 setMargins(dp(4), dp(3), dp(4), dp(3))
             })
@@ -149,12 +178,12 @@ class MainActivity : Activity() {
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             isFocusable = false
-            isFocusableInTouchMode = false
+            isVerticalScrollBarEnabled = false
             addView(grid)
         }
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        content.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
-        refreshClock.run()
+        clockTick.run()
         dock.getChildAt(0)?.requestFocus()
     }
 
@@ -163,110 +192,199 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             isFocusable = true
+            isFocusableInTouchMode = true
             background = tileBackground(false, large)
-            setPadding(dp(6), dp(7), dp(6), dp(7))
+            setPadding(dp(5), dp(5), dp(5), dp(5))
             setOnFocusChangeListener { v, focused -> v.background = tileBackground(focused, large) }
             setOnClickListener { action() }
             if (app != null) {
-                val icon = android.widget.ImageView(this@MainActivity).apply {
+                val icon = ImageView(this@MainActivity).apply {
                     setImageDrawable(app.icon)
-                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    scaleType = ImageView.ScaleType.FIT_CENTER
                 }
-                addView(icon, LinearLayout.LayoutParams(if (large) dp(48) else dp(38), if (large) dp(48) else dp(38)))
+                addView(icon, LinearLayout.LayoutParams(if (large) dp(58) else dp(42), if (large) dp(58) else dp(42)))
                 addView(TextView(this@MainActivity).apply {
                     text = app.label
-                    textSize = if (large) 14f else 12f
+                    textSize = if (large) 15f else 12f
                     gravity = Gravity.CENTER
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     setTextColor(Color.WHITE)
-                    setPadding(0, dp(5), 0, 0)
-                }, LinearLayout.LayoutParams(-1, dp(25)))
+                    setPadding(0, dp(3), 0, 0)
+                }, LinearLayout.LayoutParams(-1, dp(23)))
             } else {
                 addView(TextView(this@MainActivity).apply {
-                    text = "＋\nВыбрать"
+                    text = "+"
+                    textSize = 40f
                     gravity = Gravity.CENTER
-                    textSize = 14f
                     setTextColor(Color.WHITE)
                 })
             }
         }
     }
 
-    private fun sectionTitle(value: String) = TextView(this).apply {
-        text = value
-        textSize = 17f
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(Color.WHITE)
-        setPadding(dp(2), dp(13), 0, dp(7))
+    private fun chooseDockApp(slot: Int) {
+        val chosen = favorites()
+        val rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this)
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        apps.forEach { app ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(5), dp(10), dp(5))
+                val icon = ImageView(this@MainActivity).apply { setImageDrawable(app.icon) }
+                addView(icon, LinearLayout.LayoutParams(dp(38), dp(38)))
+                addView(TextView(this@MainActivity).apply {
+                    text = app.label; textSize = 16f; setTextColor(Color.WHITE)
+                    setPadding(dp(12), 0, 0, 0)
+                }, LinearLayout.LayoutParams(0, dp(48), 1f))
+                addView(TextView(this@MainActivity).apply {
+                    text = if (app.pkg in chosen) "✓" else "+"
+                    textSize = 28f
+                    setTextColor(0xFF75D8FF.toInt())
+                    gravity = Gravity.CENTER
+                    setOnClickListener {
+                        val current = favorites()
+                        val old = current.indexOf(app.pkg)
+                        if (old >= 0) current.removeAt(old)
+                        while (current.size <= slot) current.add("")
+                        current[slot] = app.pkg
+                        val compact = current.filter { it.isNotBlank() }.distinct().take(4)
+                        prefs.edit().putString("favorites", compact.joinToString("|")).apply()
+                        buildHome()
+                    }
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            }
+            list.addView(row)
+            val line = View(this).apply { setBackgroundColor(0x447FA8D8) }
+            list.addView(line, LinearLayout.LayoutParams(-1, dp(1)))
+        }
+        scroll.addView(list)
+        rows.addView(scroll)
+        AlertDialog.Builder(this).setTitle("Добавить приложение в док")
+            .setView(rows).setNegativeButton("Закрыть", null).show()
     }
 
     private fun showSettings() {
-        AlertDialog.Builder(this)
-            .setTitle("Настройки рабочего стола")
-            .setItems(arrayOf("Выбрать 4 приложения в док", "Изменить фон")) { _, which ->
-                if (which == 0) {
-                    AlertDialog.Builder(this)
-                        .setTitle("Какую позицию изменить?")
-                        .setItems(arrayOf("1", "2", "3", "4")) { _, slot -> chooseFavorite(slot) }
-                        .setNegativeButton("Отмена", null)
-                        .show()
-                } else chooseBackground()
-            }
-            .setNegativeButton("Закрыть", null)
-            .show()
+        AlertDialog.Builder(this).setTitle("Настройки рабочего стола")
+            .setItems(arrayOf("Настроить 4 приложения в доке", "Сменить обои")) { _, which ->
+                if (which == 0) chooseDockApp(0) else chooseWallpaper()
+            }.setNegativeButton("Закрыть", null).show()
     }
 
-    private fun chooseFavorite(slot: Int) {
-        val labels = apps.map { it.label }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("Приложение для дока " + (slot + 1))
-            .setItems(labels) { _, index ->
-                val selected = apps[index].pkg
-                val favorites = favoritePackages()
-                while (favorites.size <= slot) favorites.add("")
-                val oldIndex = favorites.indexOf(selected)
-                if (oldIndex >= 0 && oldIndex != slot) favorites[oldIndex] = favorites.getOrNull(slot) ?: ""
-                favorites[slot] = selected
-                prefs.edit().putString("favorites", favorites.filter { it.isNotBlank() }.joinToString("|")).apply()
+    private fun chooseWallpaper() {
+        AlertDialog.Builder(this).setTitle("Обои")
+            .setItems(arrayOf("Тюмень — ночной мост", "Северное сияние", "Горный закат", "Неоновый город")) { _, index ->
+                prefs.edit().putInt("wallpaper", index).apply()
                 buildHome()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+            }.setNegativeButton("Отмена", null).show()
     }
 
-    private fun chooseBackground() {
-        AlertDialog.Builder(this)
-            .setTitle("Фон рабочего стола")
-            .setItems(backgroundNames.toTypedArray()) { _, index ->
-                prefs.edit().putInt("background", index).apply()
-                buildHome()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+    private fun updateNetwork() {
+        val wifi = try {
+            val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            if (wm.isWifiEnabled) "Wi‑Fi ●" else "Wi‑Fi ○"
+        } catch (_: Exception) { "Wi‑Fi ?" }
+        val bt = try {
+            if (BluetoothAdapter.getDefaultAdapter()?.isEnabled == true) "  BT ●" else "  BT ○"
+        } catch (_: Exception) { "  BT ?" }
+        network.text = "$wifi$bt"
+    }
+
+    private fun focusButton(label: String, action: () -> Unit) = TextView(this).apply {
+        text = label
+        gravity = Gravity.CENTER
+        setTextColor(Color.WHITE)
+        background = rounded(0xAA142B55.toInt(), 18, 0xAAFFFFFF.toInt(), 1)
+        isFocusable = true
+        setOnFocusChangeListener { v, focused ->
+            v.background = rounded(if (focused) 0xEE0756A6.toInt() else 0xAA142B55.toInt(), 18,
+                if (focused) 0xFF54D8FF.toInt() else 0xAAFFFFFF.toInt(), if (focused) 3 else 1)
+        }
+        setOnClickListener { action() }
+    }
+
+    private fun rounded(color: Int, radius: Int, stroke: Int, strokeWidth: Int) =
+        GradientDrawable().apply {
+            setColor(color); cornerRadius = dp(radius).toFloat()
+            setStroke(dp(strokeWidth), stroke)
+        }
+
+    private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
+        cornerRadius = dp(if (large) 19 else 14).toFloat()
+        setColor(if (focused) 0xEE0B4F9A.toInt() else if (large) 0xAA142C55.toInt() else 0x99202B49.toInt())
+        setStroke(dp(if (focused) 3 else 1), if (focused) 0xFF40D9FF.toInt() else 0x887FCBFF.toInt())
     }
 
     private fun launch(pkg: String) {
         packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
     }
 
-    private fun backgroundDrawable(): GradientDrawable {
-        val index = prefs.getInt("background", 0).coerceIn(backgrounds.indices)
-        return GradientDrawable(GradientDrawable.Orientation.TL_BR, backgrounds[index])
-    }
-
-    private fun pillBackground() = GradientDrawable().apply {
-        cornerRadius = dp(24).toFloat()
-        setColor(0x443FFFFF)
-        setStroke(dp(1), 0x99FFFFFF.toInt())
-    }
-
-    private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
-        cornerRadius = dp(if (large) 17 else 13).toFloat()
-        setColor(if (focused) 0xCCB9EFFF.toInt() else if (large) 0xAA142E59.toInt() else 0x88202B49.toInt())
-        if (focused) setStroke(dp(3), 0xFFFFD66B.toInt())
-        else setStroke(dp(1), 0x667FE8FF)
-    }
-
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    private inner class TyumenWallpaper(context: Context, private val style: Int) : View(context) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val w = width.toFloat(); val h = height.toFloat()
+            val sky = when (style) {
+                1 -> intArrayOf(0xFF061B35.toInt(), 0xFF075D72.toInt(), 0xFF06152C.toInt())
+                2 -> intArrayOf(0xFF3A1748.toInt(), 0xFFEC754C.toInt(), 0xFF172B4C.toInt())
+                3 -> intArrayOf(0xFF080D2C.toInt(), 0xFF5A176A.toInt(), 0xFF101A40.toInt())
+                else -> intArrayOf(0xFF071B43.toInt(), 0xFF183C7D.toInt(), 0xFF08132F.toInt())
+            }
+            paint.shader = LinearGradient(0f, 0f, 0f, h, sky, null, Shader.TileMode.CLAMP)
+            canvas.drawRect(0f, 0f, w, h, paint)
+            paint.shader = null
+            paint.color = 0x22FFFFFF
+            for (i in 0..45) {
+                val x = ((i * 173) % 997) / 997f * w
+                val y = ((i * 97) % 421) / 421f * h * .48f
+                canvas.drawCircle(x, y, if (i % 4 == 0) 2f else 1f, paint)
+            }
+            val horizon = h * .48f
+            paint.color = 0xFF101F3B.toInt()
+            for (i in 0..17) {
+                val bw = w * (.025f + (i % 3) * .012f)
+                val bh = h * (.07f + (i % 5) * .018f)
+                val x = i * w / 18f
+                canvas.drawRect(x, horizon - bh, x + bw, horizon, paint)
+            }
+            paint.color = 0xFF071B38.toInt()
+            canvas.drawRect(0f, horizon, w, h, paint)
+            paint.shader = LinearGradient(0f, horizon, 0f, h, 0xFF102B59.toInt(), 0xFF050E25.toInt(), Shader.TileMode.CLAMP)
+            canvas.drawRect(0f, horizon, w, h, paint)
+            paint.shader = null
+            // River reflections
+            for (i in 0..28) {
+                val y = horizon + i * h * .017f
+                paint.color = if (i % 2 == 0) 0x443F9DFF else 0x33FF9D70
+                paint.strokeWidth = if (i % 3 == 0) 4f else 2f
+                canvas.drawLine(w * .25f, y, w * .83f, y + (i % 4) * 2f, paint)
+            }
+            // Bridge deck and pylons
+            val deckY = h * .53f
+            paint.color = 0xFFE4C9FF.toInt()
+            paint.strokeWidth = h * .008f
+            canvas.drawLine(w * .28f, deckY, w * .96f, deckY, paint)
+            paint.strokeWidth = h * .006f
+            canvas.drawLine(w * .74f, h * .20f, w * .74f, deckY, paint)
+            paint.color = 0xFFB7DFFF.toInt()
+            paint.strokeWidth = 2.5f
+            for (i in 0..12) {
+                val x = w * (.30f + i * .036f)
+                canvas.drawLine(w * .74f, h * .205f, x, deckY, paint)
+            }
+            // Cathedral silhouette and domes
+            paint.color = 0xFFDEE8F7.toInt()
+            canvas.drawRect(w * .18f, h * .405f, w * .27f, deckY, paint)
+            paint.color = 0xFFFFD47B.toInt()
+            for (i in 0..2) {
+                val x = w * (.195f + i * .035f)
+                canvas.drawOval(x, h * .36f, x + w * .018f, h * .41f, paint)
+                canvas.drawLine(x + w * .009f, h * .35f, x + w * .009f, h * .33f, paint)
+            }
+        }
+    }
 }
