@@ -86,7 +86,11 @@ class MainActivity : Activity() {
 
     private fun buildHome() {
         root = FrameLayout(this)
-        val wallpaper = TyumenWallpaper(this, prefs.getInt("wallpaper", 0))
+        val wallpaper = ImageView(this).apply {
+            setImageResource(R.drawable.tyumen_bridge_wallpaper)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = "Ночной мост через Туру в Тюмени"
+        }
         root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
 
         val content = LinearLayout(this).apply {
@@ -285,7 +289,7 @@ class MainActivity : Activity() {
 
     private fun chooseWallpaper() {
         AlertDialog.Builder(this).setTitle("Обои")
-            .setItems(arrayOf("Тюмень — ночной мост", "Северное сияние", "Горный закат", "Неоновый город")) { _, index ->
+            .setItems(arrayOf("Тюмень — ночной мост")) { _, index ->
                 prefs.edit().putInt("wallpaper", index).apply()
                 buildHome()
             }.setNegativeButton("Отмена", null).show()
@@ -377,68 +381,4 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private inner class TyumenWallpaper(context: Context, private val style: Int) : View(context) {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val w = width.toFloat(); val h = height.toFloat()
-            val sky = when (style) {
-                1 -> intArrayOf(0xFF061B35.toInt(), 0xFF075D72.toInt(), 0xFF06152C.toInt())
-                2 -> intArrayOf(0xFF3A1748.toInt(), 0xFFEC754C.toInt(), 0xFF172B4C.toInt())
-                3 -> intArrayOf(0xFF080D2C.toInt(), 0xFF5A176A.toInt(), 0xFF101A40.toInt())
-                else -> intArrayOf(0xFF071B43.toInt(), 0xFF183C7D.toInt(), 0xFF08132F.toInt())
-            }
-            paint.shader = LinearGradient(0f, 0f, 0f, h, sky, null, Shader.TileMode.CLAMP)
-            canvas.drawRect(0f, 0f, w, h, paint)
-            paint.shader = null
-            paint.color = 0x22FFFFFF
-            for (i in 0..45) {
-                val x = ((i * 173) % 997) / 997f * w
-                val y = ((i * 97) % 421) / 421f * h * .48f
-                canvas.drawCircle(x, y, if (i % 4 == 0) 2f else 1f, paint)
-            }
-            val horizon = h * .48f
-            paint.color = 0xFF101F3B.toInt()
-            for (i in 0..17) {
-                val bw = w * (.025f + (i % 3) * .012f)
-                val bh = h * (.07f + (i % 5) * .018f)
-                val x = i * w / 18f
-                canvas.drawRect(x, horizon - bh, x + bw, horizon, paint)
-            }
-            paint.color = 0xFF071B38.toInt()
-            canvas.drawRect(0f, horizon, w, h, paint)
-            paint.shader = LinearGradient(0f, horizon, 0f, h, 0xFF102B59.toInt(), 0xFF050E25.toInt(), Shader.TileMode.CLAMP)
-            canvas.drawRect(0f, horizon, w, h, paint)
-            paint.shader = null
-            // River reflections
-            for (i in 0..28) {
-                val y = horizon + i * h * .017f
-                paint.color = if (i % 2 == 0) 0x443F9DFF else 0x33FF9D70
-                paint.strokeWidth = if (i % 3 == 0) 4f else 2f
-                canvas.drawLine(w * .25f, y, w * .83f, y + (i % 4) * 2f, paint)
-            }
-            // Bridge deck and pylons
-            val deckY = h * .53f
-            paint.color = 0xFFE4C9FF.toInt()
-            paint.strokeWidth = h * .008f
-            canvas.drawLine(w * .28f, deckY, w * .96f, deckY, paint)
-            paint.strokeWidth = h * .006f
-            canvas.drawLine(w * .74f, h * .20f, w * .74f, deckY, paint)
-            paint.color = 0xFFB7DFFF.toInt()
-            paint.strokeWidth = 2.5f
-            for (i in 0..12) {
-                val x = w * (.30f + i * .036f)
-                canvas.drawLine(w * .74f, h * .205f, x, deckY, paint)
-            }
-            // Cathedral silhouette and domes
-            paint.color = 0xFFDEE8F7.toInt()
-            canvas.drawRect(w * .18f, h * .405f, w * .27f, deckY, paint)
-            paint.color = 0xFFFFD47B.toInt()
-            for (i in 0..2) {
-                val x = w * (.195f + i * .035f)
-                canvas.drawOval(x, h * .36f, x + w * .018f, h * .41f, paint)
-                canvas.drawLine(x + w * .009f, h * .35f, x + w * .009f, h * .33f, paint)
-            }
-        }
-    }
 }
