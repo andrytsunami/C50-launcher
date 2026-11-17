@@ -364,8 +364,7 @@ class MainActivity : Activity() {
             val adapter = BluetoothAdapter.getDefaultAdapter()
             adapter != null && adapter.isEnabled &&
                 (adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
-                 adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
-                 adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HID_HOST) == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
+                 adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
         } catch (_: Exception) { false }
         (network as? NetworkIconsView)?.setStates(wifiConnected, bluetoothConnected)
     }
