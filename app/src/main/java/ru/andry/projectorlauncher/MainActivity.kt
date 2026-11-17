@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -95,7 +96,12 @@ class MainActivity : Activity() {
     private fun buildHome() {
         val root = FrameLayout(this)
         val wallpaper = ImageView(this).apply {
-            setImageResource(R.drawable.tyumen_bridge_wallpaper)
+            setImageResource(when (prefs.getString("wallpaper", "tyumen")) {
+                "pixel" -> R.drawable.wallpaper_pixel_sunset
+                "space" -> R.drawable.wallpaper_space
+                "srilanka" -> R.drawable.wallpaper_sri_lanka
+                else -> R.drawable.tyumen_bridge_wallpaper
+            })
             scaleType = ImageView.ScaleType.CENTER_CROP
             contentDescription = "Ночной мост через Туру в Тюмени"
         }
@@ -184,7 +190,7 @@ class MainActivity : Activity() {
         for (slot in 0..3) {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
             dock.addView(appTile(app, true) {
-                if (app != null) launch(app.pkg) else chooseDockApp(slot)
+                if (app != null) launch(app.pkg) else chooseDockApps()
             }, LinearLayout.LayoutParams(0, dp(98), 1f).apply {
                 leftMargin = dp(5); rightMargin = dp(5)
             })
@@ -192,28 +198,25 @@ class MainActivity : Activity() {
         val dockWidth = (resources.displayMetrics.widthPixels * 0.67f).toInt()
         content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply { gravity = Gravity.CENTER_HORIZONTAL })
 
-        val bottom = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
-            background = rounded(0xDD09152F.toInt(), 22, 0x668FCBFF, 1)
-            setPadding(dp(5), dp(5), dp(5), dp(5)); elevation = dp(10).toFloat()
+        val allAppsScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
         }
-        val actions = listOf(
-            Triple("music", "Музыка", { launchByKeywords(listOf("музык", "music")) }),
-            Triple("gallery", "Галерея", { launchByKeywords(listOf("галере", "фото", "gallery")) }),
-            Triple("movie", "Кино", { launchByKeywords(listOf("кино", "видео", "movie", "video")) }),
-            Triple("browser", "Браузер", { launchByKeywords(listOf("брауз", "browser")) }),
-            Triple("gear", "Настройки", { showSettings() }),
-            Triple("apps", "Все приложения", { showAllApps() }),
-            Triple("edit", "Настроить", { showSettings() })
-        )
-        actions.forEach { item ->
-            bottom.addView(bottomAction(item.first, item.second, item.third),
-                LinearLayout.LayoutParams(0, dp(72), 1f))
+        val allAppsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
         }
-        content.addView(bottom, LinearLayout.LayoutParams(-1, dp(82)).apply { topMargin = dp(10) })
-        content.addView(TextView(this).apply {
-            text = "⌄"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-        }, LinearLayout.LayoutParams(-1, dp(20)))
+        apps.forEach { app ->
+            allAppsRow.addView(appTile(app, false) { launch(app.pkg) },
+                LinearLayout.LayoutParams(dp(88), dp(82)).apply {
+                    leftMargin = dp(5); rightMargin = dp(5)
+                })
+        }
+        allAppsScroll.addView(allAppsRow)
+        content.addView(allAppsScroll, LinearLayout.LayoutParams(-1, dp(88)).apply {
+            topMargin = dp(10)
+        })
 
         setContentView(root)
         clockTick.run()
@@ -282,6 +285,12 @@ class MainActivity : Activity() {
             v.background = rounded(if (focused) 0xAA0756A6.toInt() else 0x55202C50,
                 16, if (focused) 0xFF54D8FF.toInt() else 0x00FFFFFF, if (focused) 2 else 0)
         }
+        setOnClickListener {
+            val action = if (kind == "wifi") Settings.ACTION_WIFI_SETTINGS else Settings.ACTION_BLUETOOTH_SETTINGS
+            try { startActivity(Intent(action)) } catch (_: Exception) {
+                try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (_: Exception) { }
+            }
+        }
     }
 
     private fun iconParams() = LinearLayout.LayoutParams(dp(50), dp(50)).apply { rightMargin = dp(5) }
@@ -343,59 +352,81 @@ class MainActivity : Activity() {
         return BitmapDrawable(resources, bitmap)
     }
 
-    private fun chooseDockApp(slot: Int) {
-        val current = favorites()
+    private fun chooseDockApps() {
+        val selected = favorites().toMutableList()
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(this)
-        var firstAction: TextView? = null
-        apps.forEach { app ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(4), dp(8), dp(4))
-                addView(ImageView(this@MainActivity).apply {
-                    setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER
-                }, LinearLayout.LayoutParams(dp(40), dp(40)))
-                addView(TextView(this@MainActivity).apply {
-                    text = app.label; textSize = 15f; setTextColor(Color.WHITE)
-                    setPadding(dp(12), 0, 0, 0); maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }, LinearLayout.LayoutParams(0, dp(48), 1f))
-                val add = TextView(this@MainActivity).apply {
-                    text = if (app.pkg in current) "✓" else "+"
-                    textSize = 27f; typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    gravity = Gravity.CENTER
-                    setTextColor(if (app.pkg in current) 0xFF75F0B2.toInt() else Color.WHITE)
-                    background = pickerBackground(false); isFocusable = true; isFocusableInTouchMode = true
-                    contentDescription = if (app.pkg in current) "Уже в доке" else "Добавить в док"
-                    setOnFocusChangeListener { v, focused -> v.background = pickerBackground(focused) }
+        val scroll = ScrollView(this).apply { addView(list) }
+        fun refreshRows() {
+            list.removeAllViews()
+            apps.forEach { app ->
+                val index = selected.indexOf(app.pkg)
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    isFocusable = true
+                    setPadding(dp(8), dp(3), dp(8), dp(3))
+                    addView(ImageView(this@MainActivity).apply {
+                        setImageDrawable(app.icon)
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                    }, LinearLayout.LayoutParams(dp(38), dp(38)))
+                    addView(TextView(this@MainActivity).apply {
+                        text = app.label
+                        textSize = 15f
+                        setTextColor(Color.WHITE)
+                        setPadding(dp(10), 0, 0, 0)
+                    }, LinearLayout.LayoutParams(0, dp(44), 1f))
+                    addView(TextView(this@MainActivity).apply {
+                        text = if (index >= 0) (index + 1).toString() else "+"
+                        textSize = 20f
+                        gravity = Gravity.CENTER
+                        setTextColor(if (index >= 0) 0xFF75F0B2.toInt() else Color.WHITE)
+                        background = pickerBackground(false)
+                    }, LinearLayout.LayoutParams(dp(44), dp(42)))
                     setOnClickListener {
-                        val updated = favorites()
-                        val old = updated.indexOf(app.pkg)
-                        if (old >= 0) updated.removeAt(old)
-                        while (updated.size <= slot) updated.add("")
-                        updated[slot] = app.pkg
-                        prefs.edit().putString("favorites", updated.filter { it.isNotBlank() }.distinct().take(4).joinToString("|")).apply()
-                        buildHome()
+                        val existing = selected.indexOf(app.pkg)
+                        if (existing >= 0) selected.removeAt(existing)
+                        else if (selected.size < 4) selected.add(app.pkg)
+                        else Toast.makeText(this@MainActivity, "Можно выбрать не более четырёх приложений", Toast.LENGTH_SHORT).show()
+                        refreshRows()
                     }
                 }
-                if (firstAction == null) firstAction = add
-                addView(add, LinearLayout.LayoutParams(dp(48), dp(48)))
+                list.addView(row)
+                list.addView(View(this).apply {
+                    setBackgroundColor(0x447FA8D8)
+                }, LinearLayout.LayoutParams(-1, dp(1)))
             }
-            list.addView(row)
-            list.addView(View(this).apply { setBackgroundColor(0x447FA8D8) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
-        scroll.addView(list)
-        AlertDialog.Builder(this).setTitle("Приложение для позиции " + (slot + 1))
-            .setView(scroll).setNegativeButton("Закрыть", null).create().also { dialog ->
-                dialog.setOnShowListener { firstAction?.requestFocus() }; dialog.show()
+        refreshRows()
+        AlertDialog.Builder(this)
+            .setTitle("Выберите приложения для дока (по порядку)")
+            .setView(scroll)
+            .setPositiveButton("Сохранить") { _, _ ->
+                prefs.edit().putString("favorites", selected.joinToString("|")).apply()
+                buildHome()
             }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun showSettings() {
+        val items = arrayOf(
+            "Настроить четыре приложения в доке",
+            "Выбрать обои",
+            "Сделать ProjectorHome главным экраном"
+        )
         AlertDialog.Builder(this).setTitle("Настройки ProjectorHome")
-            .setItems(arrayOf("Изменить приложение 1 в доке", "Изменить приложение 2 в доке",
-                "Изменить приложение 3 в доке", "Изменить приложение 4 в доке", "Сменить обои")) { _, which ->
-                if (which < 4) chooseDockApp(which) else chooseWallpaper()
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> chooseDockApps()
+                    1 -> chooseWallpaper()
+                    2 -> {
+                        try { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
+                        catch (_: Exception) {
+                            try { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
+                            catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
+                        }
+                    }
+                }
             }.setNegativeButton("Закрыть", null).show()
     }
 
@@ -406,8 +437,16 @@ class MainActivity : Activity() {
     }
 
     private fun chooseWallpaper() {
-        AlertDialog.Builder(this).setTitle("Обои")
-            .setItems(arrayOf("Тюмень — ночной мост")) { _, _ -> buildHome() }
+        val names = arrayOf("Тюмень", "Закат в горах", "Космос", "Шри-Ланка")
+        val values = arrayOf("tyumen", "pixel", "space", "srilanka")
+        val current = prefs.getString("wallpaper", "tyumen")
+        val checked = values.indexOf(current).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("Выберите обои")
+            .setSingleChoiceItems(names, checked) { dialog, which ->
+                prefs.edit().putString("wallpaper", values[which]).apply()
+                dialog.dismiss()
+                buildHome()
+            }
             .setNegativeButton("Отмена", null).show()
     }
 
@@ -504,8 +543,10 @@ class MainActivity : Activity() {
             manager.isWifiEnabled && manager.connectionInfo?.supplicantState == android.net.wifi.SupplicantState.COMPLETED
         } catch (_: Exception) { false }
         val bluetooth = try { BluetoothAdapter.getDefaultAdapter()?.isEnabled == true } catch (_: Exception) { false }
-        wifiIcon.alpha = if (wifi) 1f else 0.42f
-        btIcon.alpha = if (bluetooth) 1f else 0.42f
+        wifiIcon.setImageDrawable(drawIcon("wifi", if (wifi) 0xFF38D9FF.toInt() else Color.WHITE))
+        btIcon.setImageDrawable(drawIcon("bluetooth", if (bluetooth) 0xFF38D9FF.toInt() else Color.WHITE))
+        wifiIcon.alpha = 1f
+        btIcon.alpha = 1f
     }
 
     private fun pickerBackground(focused: Boolean) = GradientDrawable().apply {
