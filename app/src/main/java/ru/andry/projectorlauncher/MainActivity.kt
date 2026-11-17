@@ -98,6 +98,9 @@ class MainActivity : Activity() {
             setPadding(dp(34), dp(22), dp(34), dp(18))
         }
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
+        // Force launcher controls above the full-screen wallpaper on vendor Android builds.
+        content.elevation = dp(12).toFloat()
+        content.bringToFront()
 
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
         val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
