@@ -23,7 +23,7 @@ class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("launcher", MODE_PRIVATE) }
     private lateinit var clock: TextView
     private lateinit var date: TextView
-    private lateinit var network: View
+    private lateinit var network: TextView
     private lateinit var weatherView: TextView
     private lateinit var root: FrameLayout
     private var apps: List<AppEntry> = emptyList()
@@ -98,9 +98,6 @@ class MainActivity : Activity() {
             setPadding(dp(34), dp(22), dp(34), dp(18))
         }
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
-        // Force launcher controls above the full-screen wallpaper on vendor Android builds.
-        content.elevation = dp(12).toFloat()
-        content.bringToFront()
 
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
         val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -135,10 +132,13 @@ class MainActivity : Activity() {
         top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
 
         val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
-        network = NetworkIconsView(this).apply {
-            contentDescription = "Состояние Wi-Fi и Bluetooth"
-            background = rounded(0x88202C50.toInt(), 20, 0x66FFFFFF.toInt(), 1)
+        network = TextView(this).apply {
+            textSize = 22f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
             setPadding(dp(12), dp(8), dp(12), dp(8))
+            background = rounded(0x88202C50.toInt(), 20, 0x66FFFFFF.toInt(), 1)
+            isFocusable = true
         }
         val settings = focusButton("⚙") { showSettings() }.apply {
             textSize = 28f
@@ -151,7 +151,7 @@ class MainActivity : Activity() {
         content.addView(top)
 
         val spacer = Space(this)
-        content.addView(spacer, LinearLayout.LayoutParams(1, 0, 2f))
+        content.addView(spacer, LinearLayout.LayoutParams(1, 0, 1f))
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -239,34 +239,25 @@ class MainActivity : Activity() {
 
     private fun chooseDockApp(slot: Int) {
         val chosen = favorites()
+        val rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this)
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(this).apply { isFillViewport = true; isVerticalScrollBarEnabled = true }
-        var firstAdd: TextView? = null
         apps.forEach { app ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(4), dp(8), dp(4))
-                val icon = ImageView(this@MainActivity).apply { setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER }
+                setPadding(dp(10), dp(5), dp(10), dp(5))
+                val icon = ImageView(this@MainActivity).apply { setImageDrawable(app.icon) }
                 addView(icon, LinearLayout.LayoutParams(dp(38), dp(38)))
                 addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = 16f; setTextColor(Color.WHITE)
-                    gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), 0, 0, 0)
-                    maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                    setPadding(dp(12), 0, 0, 0)
                 }, LinearLayout.LayoutParams(0, dp(48), 1f))
-                val add = TextView(this@MainActivity).apply {
+                addView(TextView(this@MainActivity).apply {
                     text = if (app.pkg in chosen) "✓" else "+"
-                    textSize = 27f; typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    textSize = 28f
+                    setTextColor(0xFF75D8FF.toInt())
                     gravity = Gravity.CENTER
-                    setTextColor(if (app.pkg in chosen) 0xFF75F0B2.toInt() else Color.WHITE)
-                    background = pickerButtonBackground(false)
-                    isFocusable = true; isFocusableInTouchMode = true
-                    contentDescription = if (app.pkg in chosen) "Уже в доке" else "Добавить в док"
-                    setOnFocusChangeListener { v, focused ->
-                        v.background = pickerButtonBackground(focused)
-                        v.scaleX = if (focused) 1.08f else 1f
-                        v.scaleY = if (focused) 1.08f else 1f
-                    }
                     setOnClickListener {
                         val current = favorites()
                         val old = current.indexOf(app.pkg)
@@ -277,32 +268,22 @@ class MainActivity : Activity() {
                         prefs.edit().putString("favorites", compact.joinToString("|")).apply()
                         buildHome()
                     }
-                }
-                addView(add, LinearLayout.LayoutParams(dp(48), dp(48)))
-                if (firstAdd == null) firstAdd = add
+                }, LinearLayout.LayoutParams(dp(48), dp(48)))
             }
             list.addView(row)
-            list.addView(View(this).apply { setBackgroundColor(0x447FA8D8) }, LinearLayout.LayoutParams(-1, dp(1)))
+            val line = View(this).apply { setBackgroundColor(0x447FA8D8) }
+            list.addView(line, LinearLayout.LayoutParams(-1, dp(1)))
         }
         scroll.addView(list)
-        AlertDialog.Builder(this).setTitle("Добавить приложение в док").setView(scroll)
-            .setNegativeButton("Закрыть", null).create().also { dialog ->
-                dialog.setOnShowListener { firstAdd?.requestFocus() }
-                dialog.show()
-            }
-    }
-
-    private fun pickerButtonBackground(focused: Boolean) = GradientDrawable().apply {
-        cornerRadius = dp(10).toFloat()
-        setColor(if (focused) 0xFF0756A6.toInt() else 0x55202C50)
-        setStroke(dp(if (focused) 3 else 1), if (focused) 0xFFFFD45C.toInt() else 0x99A9DFFF.toInt())
+        rows.addView(scroll)
+        AlertDialog.Builder(this).setTitle("Добавить приложение в док")
+            .setView(rows).setNegativeButton("Закрыть", null).show()
     }
 
     private fun showSettings() {
         AlertDialog.Builder(this).setTitle("Настройки рабочего стола")
-            .setItems(arrayOf("Изменить приложение 1 в доке", "Изменить приложение 2 в доке",
-                "Изменить приложение 3 в доке", "Изменить приложение 4 в доке", "Сменить обои")) { _, which ->
-                if (which < 4) chooseDockApp(which) else chooseWallpaper()
+            .setItems(arrayOf("Настроить 4 приложения в доке", "Сменить обои")) { _, which ->
+                if (which == 0) chooseDockApp(0) else chooseWallpaper()
             }.setNegativeButton("Закрыть", null).show()
     }
 
@@ -359,43 +340,14 @@ class MainActivity : Activity() {
     }
 
     private fun updateNetwork() {
-        val wifiConnected = try {
+        val wifi = try {
             val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            wm.isWifiEnabled && wm.connectionInfo?.supplicantState == android.net.wifi.SupplicantState.COMPLETED
-        } catch (_: Exception) { false }
-        val bluetoothConnected = try {
-            val adapter = BluetoothAdapter.getDefaultAdapter()
-            adapter != null && adapter.isEnabled &&
-                (adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
-                 adapter.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED)
-        } catch (_: Exception) { false }
-        (network as? NetworkIconsView)?.setStates(wifiConnected, bluetoothConnected)
-    }
-
-    private inner class NetworkIconsView(context: Context) : View(context) {
-        private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = dp(2).toFloat(); strokeCap = Paint.Cap.ROUND }
-        private var wifi = false
-        private var bt = false
-        fun setStates(wifiConnected: Boolean, bluetoothConnected: Boolean) { wifi = wifiConnected; bt = bluetoothConnected; invalidate() }
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val cy = height / 2f
-            val wx = dp(27).toFloat()
-            p.color = if (wifi) 0xFF65F0B1.toInt() else 0xFFFFC45C.toInt()
-            canvas.drawArc(RectF(wx - dp(13), cy - dp(12), wx + dp(13), cy + dp(14)), 225f, 90f, false, p)
-            canvas.drawArc(RectF(wx - dp(8), cy - dp(7), wx + dp(8), cy + dp(9)), 225f, 90f, false, p)
-            p.style = Paint.Style.FILL
-            canvas.drawCircle(wx, cy + dp(8), dp(2).toFloat(), p)
-            p.style = Paint.Style.STROKE
-            val bx = dp(72).toFloat()
-            p.color = if (bt) 0xFF65F0B1.toInt() else 0xFFFFC45C.toInt()
-            val path = Path().apply {
-                moveTo(bx - dp(5), cy - dp(13)); lineTo(bx + dp(6), cy - dp(3)); lineTo(bx - dp(5), cy + dp(8))
-                moveTo(bx, cy - dp(15)); lineTo(bx, cy + dp(15))
-                moveTo(bx, cy - dp(15)); lineTo(bx + dp(6), cy - dp(9)); lineTo(bx, cy - dp(3)); lineTo(bx + dp(6), cy + dp(3)); lineTo(bx, cy + dp(9))
-            }
-            canvas.drawPath(path, p)
-        }
+            if (wm.isWifiEnabled) "Wi‑Fi ●" else "Wi‑Fi ○"
+        } catch (_: Exception) { "Wi‑Fi ?" }
+        val bt = try {
+            if (BluetoothAdapter.getDefaultAdapter()?.isEnabled == true) "  BT ●" else "  BT ○"
+        } catch (_: Exception) { "  BT ?" }
+        network.text = "$wifi$bt"
     }
 
     private fun focusButton(label: String, action: () -> Unit) = TextView(this).apply {
