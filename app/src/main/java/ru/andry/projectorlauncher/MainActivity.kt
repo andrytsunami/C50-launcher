@@ -236,25 +236,34 @@ class MainActivity : Activity() {
 
     private fun chooseDockApp(slot: Int) {
         val chosen = favorites()
-        val rows = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(this)
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this).apply { isFillViewport = true; isVerticalScrollBarEnabled = true }
+        var firstAdd: TextView? = null
         apps.forEach { app ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(5), dp(10), dp(5))
-                val icon = ImageView(this@MainActivity).apply { setImageDrawable(app.icon) }
+                setPadding(dp(10), dp(4), dp(8), dp(4))
+                val icon = ImageView(this@MainActivity).apply { setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER }
                 addView(icon, LinearLayout.LayoutParams(dp(38), dp(38)))
                 addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = 16f; setTextColor(Color.WHITE)
-                    setPadding(dp(12), 0, 0, 0)
+                    gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), 0, 0, 0)
+                    maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
                 }, LinearLayout.LayoutParams(0, dp(48), 1f))
-                addView(TextView(this@MainActivity).apply {
+                val add = TextView(this@MainActivity).apply {
                     text = if (app.pkg in chosen) "✓" else "+"
-                    textSize = 28f
-                    setTextColor(0xFF75D8FF.toInt())
+                    textSize = 27f; typeface = android.graphics.Typeface.DEFAULT_BOLD
                     gravity = Gravity.CENTER
+                    setTextColor(if (app.pkg in chosen) 0xFF75F0B2.toInt() else Color.WHITE)
+                    background = pickerButtonBackground(false)
+                    isFocusable = true; isFocusableInTouchMode = true
+                    contentDescription = if (app.pkg in chosen) "Уже в доке" else "Добавить в док"
+                    setOnFocusChangeListener { v, focused ->
+                        v.background = pickerButtonBackground(focused)
+                        v.scaleX = if (focused) 1.08f else 1f
+                        v.scaleY = if (focused) 1.08f else 1f
+                    }
                     setOnClickListener {
                         val current = favorites()
                         val old = current.indexOf(app.pkg)
@@ -265,22 +274,32 @@ class MainActivity : Activity() {
                         prefs.edit().putString("favorites", compact.joinToString("|")).apply()
                         buildHome()
                     }
-                }, LinearLayout.LayoutParams(dp(48), dp(48)))
+                }
+                addView(add, LinearLayout.LayoutParams(dp(48), dp(48)))
+                if (firstAdd == null) firstAdd = add
             }
             list.addView(row)
-            val line = View(this).apply { setBackgroundColor(0x447FA8D8) }
-            list.addView(line, LinearLayout.LayoutParams(-1, dp(1)))
+            list.addView(View(this).apply { setBackgroundColor(0x447FA8D8) }, LinearLayout.LayoutParams(-1, dp(1)))
         }
         scroll.addView(list)
-        rows.addView(scroll)
-        AlertDialog.Builder(this).setTitle("Добавить приложение в док")
-            .setView(rows).setNegativeButton("Закрыть", null).show()
+        AlertDialog.Builder(this).setTitle("Добавить приложение в док").setView(scroll)
+            .setNegativeButton("Закрыть", null).create().also { dialog ->
+                dialog.setOnShowListener { firstAdd?.requestFocus() }
+                dialog.show()
+            }
+    }
+
+    private fun pickerButtonBackground(focused: Boolean) = GradientDrawable().apply {
+        cornerRadius = dp(10).toFloat()
+        setColor(if (focused) 0xFF0756A6.toInt() else 0x55202C50)
+        setStroke(dp(if (focused) 3 else 1), if (focused) 0xFFFFD45C.toInt() else 0x99A9DFFF.toInt())
     }
 
     private fun showSettings() {
         AlertDialog.Builder(this).setTitle("Настройки рабочего стола")
-            .setItems(arrayOf("Настроить 4 приложения в доке", "Сменить обои")) { _, which ->
-                if (which == 0) chooseDockApp(0) else chooseWallpaper()
+            .setItems(arrayOf("Изменить приложение 1 в доке", "Изменить приложение 2 в доке",
+                "Изменить приложение 3 в доке", "Изменить приложение 4 в доке", "Сменить обои")) { _, which ->
+                if (which < 4) chooseDockApp(which) else chooseWallpaper()
             }.setNegativeButton("Закрыть", null).show()
     }
 
