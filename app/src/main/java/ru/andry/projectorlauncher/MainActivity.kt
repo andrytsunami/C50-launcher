@@ -113,9 +113,8 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             background = rounded(0x99202C50.toInt(), 14, 0x66FFFFFF.toInt(), 1)
             setPadding(dp(14), dp(9), dp(18), dp(9))
-            setMargins(top = 12)
         }
-        left.addView(weather)
+        left.addView(weather, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
         top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
 
         val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
