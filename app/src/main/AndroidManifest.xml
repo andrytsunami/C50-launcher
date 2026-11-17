@@ -11,7 +11,9 @@
     </queries>
     <application
         android:allowBackup="false"
-        android:label="Тюмень Home"
+        android:label="ProjectorHome"
+        android:icon="@drawable/ic_projectorhome"
+        android:roundIcon="@drawable/ic_projectorhome"
         android:theme="@style/AppTheme"
         android:supportsRtl="true">
         <activity
