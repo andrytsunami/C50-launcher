@@ -93,7 +93,12 @@ class MainActivity : Activity() {
     private fun favorites(): MutableList<String> {
         val saved = prefs.getString("favorites", null)
         if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(4).toMutableList()
-        return apps.take(4).map { it.pkg }.toMutableList()
+        val vkVideo = apps.firstOrNull {
+            it.label.contains("VK Видео", ignoreCase = true) ||
+                (it.label.contains("видео", ignoreCase = true) && it.pkg.contains("vk", ignoreCase = true)) ||
+                it.pkg.contains("vkvideo", ignoreCase = true)
+        }
+        return listOfNotNull(vkVideo?.pkg).toMutableList()
     }
 
     private fun buildHome() {
@@ -247,15 +252,12 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
             if (app != null) {
-                val frame = FrameLayout(this@MainActivity).apply {
-                    background = rounded(0x332D4774, 13, 0x338FCBFF, 1)
-                    setPadding(dp(5), dp(5), dp(5), dp(5))
-                }
+                val frame = FrameLayout(this@MainActivity)
                 frame.addView(ImageView(this@MainActivity).apply {
                     setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER
                     adjustViewBounds = true
                 }, FrameLayout.LayoutParams(-1, -1))
-                addView(frame, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
+                addView(frame, LinearLayout.LayoutParams(dp(if (large) 76 else 38), dp(if (large) 76 else 38)))
                 addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = if (large) 14f else 11f
                     gravity = Gravity.CENTER; maxLines = 1
@@ -370,46 +372,47 @@ class MainActivity : Activity() {
         fun refreshRows() {
             list.removeAllViews()
             apps.forEach { app ->
-                val index = selected.indexOf(app.pkg)
+                val selectedIndex = selected.indexOf(app.pkg)
                 val row = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     isFocusable = true
+                    isClickable = true
+                    background = pickerBackground(false)
                     setPadding(dp(8), dp(3), dp(8), dp(3))
                     addView(ImageView(this@MainActivity).apply {
                         setImageDrawable(app.icon)
                         scaleType = ImageView.ScaleType.FIT_CENTER
-                    }, LinearLayout.LayoutParams(dp(38), dp(38)))
+                    }, LinearLayout.LayoutParams(dp(42), dp(42)))
                     addView(TextView(this@MainActivity).apply {
                         text = app.label
                         textSize = 15f
                         setTextColor(Color.WHITE)
                         setPadding(dp(10), 0, 0, 0)
-                    }, LinearLayout.LayoutParams(0, dp(44), 1f))
+                    }, LinearLayout.LayoutParams(0, dp(48), 1f))
                     addView(TextView(this@MainActivity).apply {
-                        text = if (index >= 0) (index + 1).toString() else "+"
-                        textSize = 20f
+                        text = if (selectedIndex >= 0) "✓  ${selectedIndex + 1}" else "+"
+                        textSize = 17f
                         gravity = Gravity.CENTER
-                        setTextColor(if (index >= 0) 0xFF75F0B2.toInt() else Color.WHITE)
-                        background = pickerBackground(false)
-                    }, LinearLayout.LayoutParams(dp(44), dp(42)))
+                        setTextColor(if (selectedIndex >= 0) 0xFF75F0B2.toInt() else Color.WHITE)
+                    }, LinearLayout.LayoutParams(dp(54), dp(44)))
+                    setOnFocusChangeListener { v, focused -> v.background = pickerBackground(focused) }
                     setOnClickListener {
-                        val existing = selected.indexOf(app.pkg)
-                        if (existing >= 0) selected.removeAt(existing)
+                        val index = selected.indexOf(app.pkg)
+                        if (index >= 0) selected.removeAt(index)
                         else if (selected.size < 4) selected.add(app.pkg)
-                        else Toast.makeText(this@MainActivity, "Можно выбрать не более четырёх приложений", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(this@MainActivity, "В доке максимум 4 приложения", Toast.LENGTH_SHORT).show()
                         refreshRows()
                     }
                 }
                 list.addView(row)
-                list.addView(View(this).apply {
-                    setBackgroundColor(0x447FA8D8)
-                }, LinearLayout.LayoutParams(-1, dp(1)))
+                list.addView(View(this).apply { setBackgroundColor(0x447FA8D8) }, LinearLayout.LayoutParams(-1, dp(1)))
             }
         }
         refreshRows()
         AlertDialog.Builder(this)
-            .setTitle("Выберите приложения для дока (по порядку)")
+            .setTitle("Док: выберите до 4 приложений")
+            .setMessage("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.")
             .setView(scroll)
             .setPositiveButton("Сохранить") { _, _ ->
                 prefs.edit().putString("favorites", selected.joinToString("|")).apply()
