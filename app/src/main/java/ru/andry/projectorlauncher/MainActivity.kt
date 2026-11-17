@@ -13,6 +13,7 @@ import android.view.View
 import android.widget.GridLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -97,7 +98,6 @@ class MainActivity : Activity() {
 
         val grid = GridLayout(this).apply {
             columnCount = 4
-            rowCount = 2
             useDefaultMargins = false
         }
         val apps = packageManager.queryIntentActivities(
@@ -112,7 +112,9 @@ class MainActivity : Activity() {
         }.distinctBy { it.third }
             .sortedBy { it.first.lowercase(Locale.getDefault()) }
 
-        apps.take(8).forEach { app ->
+        grid.rowCount = ((apps.size + 1 + 3) / 4).coerceAtLeast(1)
+
+        apps.forEach { app ->
             val tile = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -168,7 +170,13 @@ class MainActivity : Activity() {
             setMargins(dp(6), dp(5), dp(6), dp(5))
         })
 
-        root.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
+        val appScroll = ScrollView(this).apply {
+            isFillViewport = true
+            isFocusable = false
+            isFocusableInTouchMode = false
+            addView(grid)
+        }
+        root.addView(appScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val footer = TextView(this).apply {
             text = "Выберите приложение с помощью пульта"
             textSize = 12f
