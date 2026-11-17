@@ -23,7 +23,7 @@ class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences("launcher", MODE_PRIVATE) }
     private lateinit var clock: TextView
     private lateinit var date: TextView
-    private lateinit var network: TextView
+    private lateinit var network: View
     private lateinit var weatherView: TextView
     private lateinit var root: FrameLayout
     private var apps: List<AppEntry> = emptyList()
