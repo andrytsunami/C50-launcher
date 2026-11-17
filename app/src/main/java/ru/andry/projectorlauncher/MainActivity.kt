@@ -545,8 +545,8 @@ class MainActivity : Activity() {
             s.contains("snow") || s.contains("sleet") -> "🌨️"
             s.contains("rain") -> if (s.contains("showers")) "🌦️" else "🌧️"
             s.contains("fog") -> "🌫️"
-            s.contains("cloudy") -> "☁️"
             s.contains("partlycloudy") -> if (day) "🌤️" else "☁️"
+            s.contains("cloudy") -> "☁️"
             s.contains("clearsky") || s.contains("fair") -> if (day) "☀️" else "🌙"
             else -> if (day) "🌤️" else "🌙"
         }
@@ -571,8 +571,9 @@ class MainActivity : Activity() {
         return when {
             s.contains("thunder") -> "Гроза"; s.contains("snow") -> "Снег"
             s.contains("sleet") -> "Мокрый снег"; s.contains("rain") -> "Дождь"
-            s.contains("fog") -> "Туман"; s.contains("cloudy") -> "Облачно"
-            s.contains("fair") -> "Переменная облачность"; s.contains("clearsky") -> "Ясно"
+            s.contains("fog") -> "Туман"; s.contains("partlycloudy") -> "Переменная облачность"
+            s.contains("cloudy") -> "Облачно"; s.contains("fair") -> "Переменная облачность"
+            s.contains("clearsky") -> "Ясно"
             else -> "Погодные условия"
         }
     }
