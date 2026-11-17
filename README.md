@@ -24,3 +24,5 @@ APK output: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Safe installation
 Install and test the APK without disabling the factory launcher. Select the new launcher as HOME only after confirming that it starts and remote navigation works. Keep the stock launcher enabled until the new one is fully tested.
+
+<!-- rebuild after removing invalid duplicate wallpaper resource -->
