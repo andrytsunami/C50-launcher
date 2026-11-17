@@ -40,6 +40,13 @@ class MainActivity : Activity() {
         }
     }
 
+    private val weatherRefresh = object : Runnable {
+        override fun run() {
+            loadWeather()
+            handler.postDelayed(this, 30 * 60 * 1000L)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
@@ -51,10 +58,12 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (::clock.isInitialized) handler.post(clockTick)
+        if (::weatherView.isInitialized) handler.post(weatherRefresh)
     }
 
     override fun onPause() {
         handler.removeCallbacks(clockTick)
+        handler.removeCallbacks(weatherRefresh)
         super.onPause()
     }
 
