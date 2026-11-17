@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -189,6 +190,7 @@ class MainActivity : Activity() {
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             background = rounded(0xDD09152F.toInt(), 25, 0x778FCBFF, 1)
             setPadding(dp(9), dp(8), dp(9), dp(8)); elevation = dp(12).toFloat()
         }
@@ -227,18 +229,21 @@ class MainActivity : Activity() {
         setContentView(root)
         clockTick.run()
         updateNetwork()
-        dock.getChildAt(0)?.requestFocus()
+        dock.post { dock.getChildAt(0)?.requestFocus() }
     }
 
     private fun appTile(app: AppEntry?, large: Boolean, action: () -> Unit): View {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
             isFocusable = true; isFocusableInTouchMode = true; isClickable = true
+            isFocusableInTouchMode = true
+            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             background = tileBackground(false, large)
             setPadding(dp(5), dp(5), dp(5), dp(5))
             setOnFocusChangeListener { v, focused ->
                 v.background = tileBackground(focused, large)
-                v.scaleX = if (focused) 1.035f else 1f; v.scaleY = if (focused) 1.035f else 1f
+                v.elevation = if (focused) dp(14).toFloat() else dp(2).toFloat()
+                v.scaleX = if (focused) 1.07f else 1f; v.scaleY = if (focused) 1.07f else 1f
             }
             setOnClickListener { action() }
             if (app != null) {
@@ -605,8 +610,8 @@ class MainActivity : Activity() {
 
     private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
         cornerRadius = dp(if (large) 23 else 17).toFloat()
-        setColor(if (focused) 0xEE0756A6.toInt() else if (large) 0xAA142C55.toInt() else 0x99202B49.toInt())
-        setStroke(dp(if (focused) 3 else 1), if (focused) 0xFF40D9FF.toInt() else 0x887FCBFF.toInt())
+        setColor(if (focused) 0xFF087CC2.toInt() else if (large) 0xAA142C55.toInt() else 0x99202B49.toInt())
+        setStroke(dp(if (focused) 4 else 1), if (focused) 0xFFFFD45C.toInt() else 0x887FCBFF.toInt())
     }
 
     private fun launch(pkg: String) {
