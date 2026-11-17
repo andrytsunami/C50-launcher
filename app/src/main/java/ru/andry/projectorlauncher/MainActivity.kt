@@ -210,7 +210,7 @@ class MainActivity : Activity() {
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            background = rounded(0xDD09152F.toInt(), 25, 0x778FCBFF, 1)
+            background = rounded(0xAA09152F.toInt(), 19, 0x668FCBFF, 1)
             setPadding(dp(9), dp(8), dp(9), dp(8)); elevation = dp(12).toFloat()
         }
         val selected = favorites()
@@ -266,14 +266,13 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
             if (app != null) {
-                val frame = FrameLayout(this@MainActivity)
-                frame.addView(ImageView(this@MainActivity).apply {
-                    setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER
-                    adjustViewBounds = true
-                }, FrameLayout.LayoutParams(-1, -1))
-                addView(frame, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
-                addView(TextView(this@MainActivity).apply {
-                    text = app.label; textSize = if (large) 14f else 11f
+                val icon = if (large) dockBrandIcon(app) else app.icon
+                addView(ImageView(this@MainActivity).apply {
+                    setImageDrawable(icon)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
+                if (!large) addView(TextView(this@MainActivity).apply {
+                    text = app.label; textSize = 11f
                     gravity = Gravity.CENTER; maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     setTextColor(Color.WHITE); setPadding(0, dp(3), 0, 0)
@@ -628,9 +627,58 @@ class MainActivity : Activity() {
         }
 
     private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
-        cornerRadius = dp(if (large) 23 else 17).toFloat()
-        setColor(if (focused) 0xFF087CC2.toInt() else if (large) 0xAA142C55.toInt() else 0x99202B49.toInt())
-        setStroke(dp(if (focused) 4 else 1), if (focused) 0xFFFFD45C.toInt() else 0x887FCBFF.toInt())
+        cornerRadius = dp(if (large) 15 else 13).toFloat()
+        setColor(if (focused) 0x5536C9E8 else if (large) 0x66142C55 else 0x99202B49.toInt())
+        setStroke(dp(if (focused) 2 else 1), if (focused) 0xCCFFE36A.toInt() else 0x667FCBFF)
+    }
+
+    private fun dockBrandIcon(app: AppEntry): Drawable {
+        val name = app.label.lowercase(Locale("ru"))
+        val pkg = app.pkg.lowercase(Locale.US)
+        val bitmap = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bitmap)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        fun rounded(color: Int, rect: RectF, radius: Float) {
+            p.color = color; p.style = Paint.Style.FILL
+            c.drawRoundRect(rect, radius, radius, p)
+        }
+        when {
+            name.contains("vk") || pkg.contains("vkvideo") || pkg.contains("vk.video") -> {
+                rounded(0xFF1D5CCB.toInt(), RectF(8f, 8f, 120f, 120f), 25f)
+                rounded(0xFFE85B63.toInt(), RectF(8f, 8f, 64f, 120f), 22f)
+                p.color = Color.WHITE
+                c.drawPath(Path().apply { moveTo(51f, 34f); lineTo(91f, 64f); lineTo(51f, 94f); close() }, p)
+            }
+            name.contains("youtube") || pkg.contains("youtube") -> {
+                rounded(Color.WHITE, RectF(8f, 8f, 120f, 120f), 24f)
+                rounded(0xFFFF2424.toInt(), RectF(19f, 34f, 109f, 94f), 18f)
+                p.color = Color.WHITE
+                c.drawPath(Path().apply { moveTo(55f, 47f); lineTo(55f, 81f); lineTo(83f, 64f); close() }, p)
+            }
+            name.contains("zona") || pkg.contains("zona") -> {
+                rounded(0xFF16C9E5.toInt(), RectF(8f, 8f, 120f, 120f), 24f)
+                rounded(0xFF071A42.toInt(), RectF(30f, 25f, 98f, 103f), 10f)
+                p.color = 0xFF00D9E9.toInt()
+                c.drawPath(Path().apply {
+                    moveTo(43f, 39f); lineTo(85f, 39f); lineTo(56f, 87f); lineTo(86f, 87f)
+                    lineTo(86f, 73f); lineTo(73f, 73f); lineTo(96f, 35f); lineTo(43f, 35f); close()
+                }, p)
+            }
+            name.contains("wink") || pkg.contains("wink") -> {
+                rounded(0xFF090A10.toInt(), RectF(8f, 8f, 120f, 120f), 24f)
+                p.color = 0xFFFFB45B.toInt()
+                c.drawPath(Path().apply {
+                    moveTo(45f, 30f); lineTo(98f, 64f); lineTo(45f, 98f)
+                    lineTo(45f, 78f); lineTo(68f, 64f); lineTo(45f, 50f); close()
+                }, p)
+            }
+            else -> {
+                val b = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888)
+                val cc = Canvas(b); app.icon.setBounds(8, 8, 120, 120); app.icon.draw(cc)
+                return BitmapDrawable(resources, b)
+            }
+        }
+        return BitmapDrawable(resources, bitmap)
     }
 
     private fun launch(pkg: String) {
