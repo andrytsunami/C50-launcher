@@ -30,12 +30,14 @@ class MainActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var date: TextView
     private lateinit var weatherText: TextView
+    private lateinit var weatherIcon: TextView
     private lateinit var wifiIcon: ImageView
     private lateinit var btIcon: ImageView
     private var apps: List<AppEntry> = emptyList()
     private var weatherLoading = false
 
     data class AppEntry(val label: String, val icon: Drawable, val pkg: String)
+    data class WeatherInfo(val text: String, val icon: String)
 
     private val clockTick = object : Runnable {
         override fun run() {
@@ -146,12 +148,16 @@ class MainActivity : Activity() {
                     14, if (focused) 0xFF64D9FF.toInt() else 0x55FFFFFF, if (focused) 2 else 1)
             }
         }
-        weather.addView(TextView(this).apply {
-            text = "☀"; textSize = 35f; setTextColor(0xFFFFD45C.toInt()); gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(dp(52), dp(48)))
+        weatherIcon = TextView(this).apply {
+            text = prefs.getString("weather_icon", "🌙") ?: "🌙"
+            textSize = 34f
+            gravity = Gravity.CENTER
+        }
+        weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
         weatherText = TextView(this).apply {
             text = prefs.getString("weather_text", "Тюмень  •  Нажмите для обновления") ?: "Тюмень"
-            textSize = 16f; setTextColor(Color.WHITE); setPadding(dp(10), 0, 0, 0); maxLines = 3
+            textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
         weather.addView(weatherText)
         left.addView(weather, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
@@ -461,9 +467,9 @@ class MainActivity : Activity() {
     private fun loadWeather(manual: Boolean) {
         if (weatherLoading) return
         weatherLoading = true
-        if (manual) weatherText.text = "Тюмень  •  Обновляем погоду…"
+        if (manual) weatherText.text = "Тюмень  •  Обновляем…"
         Thread {
-            var result: String? = null
+            var result: WeatherInfo? = null
             try { result = fetchMetWeather() } catch (_: Exception) {
                 try { result = fetchOpenMeteoWeather() } catch (_: Exception) { }
             }
@@ -472,17 +478,19 @@ class MainActivity : Activity() {
                 weatherLoading = false
                 if (!::weatherText.isInitialized) return@post
                 if (value != null) {
-                    weatherText.text = value
-                    prefs.edit().putString("weather_text", value).apply()
+                    weatherText.text = value.text
+                    weatherIcon.text = value.icon
+                    prefs.edit().putString("weather_text", value.text)
+                        .putString("weather_icon", value.icon).apply()
                 } else {
                     val cached = prefs.getString("weather_text", null)
-                    weatherText.text = if (cached != null) "$cached\nНе удалось обновить" else "Тюмень  •  Погода недоступна"
+                    weatherText.text = if (cached != null) "$cached\nНет связи с погодным сервисом" else "Тюмень  •  Погода недоступна"
                 }
             }
         }.start()
     }
 
-    private fun fetchMetWeather(): String {
+    private fun fetchMetWeather(): WeatherInfo {
         val connection = (URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=57.1522&lon=65.5272").openConnection() as HttpURLConnection).apply {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
             setRequestProperty("User-Agent", "ProjectorHome/1.0 (https://github.com/andrytsunami/C50-launcher)")
@@ -496,13 +504,15 @@ class MainActivity : Activity() {
             val humidity = details.optDouble("relative_humidity", 0.0).toInt()
             val symbol = first.getJSONObject("data").optJSONObject("next_1_hours")
                 ?.optJSONObject("summary")?.optString("symbol_code", "") ?: ""
-            return "Тюмень   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
-                "  •  Ветер " + wind + " м/с\nВлажность " + humidity + "%  •  MET Norway"
+            val icon = weatherIconFor(symbol, null)
+            val text = "Тюмень   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
+                "  •  Ветер " + wind + " м/с\nВлажность " + humidity + "%"
+            return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
     }
 
-    private fun fetchOpenMeteoWeather(): String {
-        val url = "https://api.open-meteo.com/v1/forecast?latitude=57.1522&longitude=65.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FYekaterinburg"
+    private fun fetchOpenMeteoWeather(): WeatherInfo {
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=57.1522&longitude=65.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=Asia%2FYekaterinburg"
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
         }
@@ -512,15 +522,46 @@ class MainActivity : Activity() {
             val feels = current.getDouble("apparent_temperature").toInt()
             val wind = current.getDouble("wind_speed_10m").toInt()
             val humidity = current.getInt("relative_humidity_2m")
-            val desc = when (current.getInt("weather_code")) {
+            val code = current.getInt("weather_code")
+            val desc = when (code) {
                 0 -> "Ясно"; 1, 2 -> "Переменная облачность"; 3 -> "Пасмурно"
                 45, 48 -> "Туман"; 51, 53, 55 -> "Морось"; 56, 57 -> "Ледяная морось"
                 61, 63, 65 -> "Дождь"; 66, 67 -> "Ледяной дождь"; 71, 73, 75, 77, 85, 86 -> "Снег"
                 80, 81, 82 -> "Ливень"; 95, 96, 99 -> "Гроза"; else -> "Погодные условия"
             }
-            return "Тюмень   " + signedTemp(temp) + "°C\n" + desc + "  •  Ощущается " + feels +
-                "°C\nВетер " + wind + " м/с  •  Влажность " + humidity + "%\nИсточник: Open-Meteo"
+            val isDay = current.optInt("is_day", 1) == 1
+            val icon = weatherIconForCode(code, isDay)
+            val text = "Тюмень   " + signedTemp(temp) + "°C\n" + desc + "  •  Ощущается " + feels +
+                "°C\nВетер " + wind + " м/с  •  Влажность " + humidity + "%"
+            return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
+    }
+
+    private fun weatherIconFor(symbol: String, isDayOverride: Boolean?): String {
+        val s = symbol.lowercase(Locale.US)
+        val day = isDayOverride ?: !s.contains("night") && !s.contains("polartwilight")
+        return when {
+            s.contains("thunder") -> "⛈️"
+            s.contains("snow") || s.contains("sleet") -> "🌨️"
+            s.contains("rain") -> if (s.contains("showers")) "🌦️" else "🌧️"
+            s.contains("fog") -> "🌫️"
+            s.contains("cloudy") -> "☁️"
+            s.contains("partlycloudy") -> if (day) "🌤️" else "☁️"
+            s.contains("clearsky") || s.contains("fair") -> if (day) "☀️" else "🌙"
+            else -> if (day) "🌤️" else "🌙"
+        }
+    }
+
+    private fun weatherIconForCode(code: Int, isDay: Boolean): String = when (code) {
+        0 -> if (isDay) "☀️" else "🌙"
+        1, 2 -> if (isDay) "🌤️" else "☁️"
+        3 -> "☁️"
+        45, 48 -> "🌫️"
+        51, 53, 55, 56, 57 -> "🌧️"
+        61, 63, 65, 66, 67, 80, 81, 82 -> "🌧️"
+        71, 73, 75, 77, 85, 86 -> "🌨️"
+        95, 96, 99 -> "⛈️"
+        else -> if (isDay) "🌤️" else "🌙"
     }
 
     private fun signedTemp(value: Int) = if (value > 0) "+$value" else value.toString()
