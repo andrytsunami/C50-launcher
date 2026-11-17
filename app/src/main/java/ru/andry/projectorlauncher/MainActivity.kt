@@ -271,7 +271,7 @@ class MainActivity : Activity() {
                     setImageDrawable(app.icon); scaleType = ImageView.ScaleType.FIT_CENTER
                     adjustViewBounds = true
                 }, FrameLayout.LayoutParams(-1, -1))
-                addView(frame, LinearLayout.LayoutParams(dp(if (large) 76 else 38), dp(if (large) 76 else 38)))
+                addView(frame, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
                 addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = if (large) 14f else 11f
                     gravity = Gravity.CENTER; maxLines = 1
@@ -382,7 +382,10 @@ class MainActivity : Activity() {
     private fun chooseDockApps() {
         val selected = favorites().toMutableList()
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(this).apply { addView(list) }
+        val scroll = ScrollView(this).apply {
+            addView(list)
+            layoutParams = ViewGroup.LayoutParams(-1, dp(320))
+        }
         fun refreshRows() {
             list.removeAllViews()
             apps.forEach { app ->
@@ -416,6 +419,7 @@ class MainActivity : Activity() {
                         if (index >= 0) selected.removeAt(index)
                         else if (selected.size < 4) selected.add(app.pkg)
                         else Toast.makeText(this@MainActivity, "В доке максимум 4 приложения", Toast.LENGTH_SHORT).show()
+                        prefs.edit().putString("favorites", selected.joinToString("|")).apply()
                         refreshRows()
                     }
                 }
@@ -428,11 +432,9 @@ class MainActivity : Activity() {
             .setTitle("Док: выберите до 4 приложений")
             .setMessage("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.")
             .setView(scroll)
-            .setPositiveButton("Сохранить") { _, _ ->
-                prefs.edit().putString("favorites", selected.joinToString("|")).apply()
-                buildHome()
-            }
-            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Готово", null)
+            .setNegativeButton("Закрыть", null)
+            .setOnDismissListener { buildHome() }
             .show()
     }
 
