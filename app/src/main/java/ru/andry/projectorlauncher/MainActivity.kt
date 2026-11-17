@@ -324,7 +324,7 @@ class MainActivity : Activity() {
                 }
                 handler.post {
                     if (::weatherView.isInitialized) {
-                        weatherView.text = "ТЮМЕНЬ   $temp°C\n$description  •  Ощущается $feels°C\nВетер $wind м/с  •  Влажность $humidity%"
+                        weatherView.text = "ТЮМЕНЬ   $temp°C\n$description  •  Ощущается $feels°C\nВетер $wind м/с  •  Влажность $humidity%\nИсточник: Open-Meteo"
                     }
                 }
             } catch (_: Exception) {
