@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var date: TextView
     private lateinit var network: TextView
+    private lateinit var weatherView: TextView
     private lateinit var root: FrameLayout
     private var apps: List<AppEntry> = emptyList()
 
@@ -107,14 +108,14 @@ class MainActivity : Activity() {
         timeRow.addView(date)
         left.addView(timeRow)
 
-        val weather = TextView(this).apply {
-            text = "☀  ТЮМЕНЬ\n     Погода подключается"
+        weatherView = TextView(this).apply {
+            text = "ТЮМЕНЬ  •  Загрузка погоды…"
             textSize = 18f
             setTextColor(Color.WHITE)
             background = rounded(0x99202C50.toInt(), 14, 0x66FFFFFF.toInt(), 1)
             setPadding(dp(14), dp(9), dp(18), dp(9))
         }
-        left.addView(weather, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
+        left.addView(weatherView, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
         top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
 
         val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
@@ -183,6 +184,7 @@ class MainActivity : Activity() {
         content.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
         clockTick.run()
+        loadWeather()
         dock.getChildAt(0)?.requestFocus()
     }
 
@@ -278,6 +280,50 @@ class MainActivity : Activity() {
                 prefs.edit().putInt("wallpaper", index).apply()
                 buildHome()
             }.setNegativeButton("Отмена", null).show()
+    }
+
+    private fun loadWeather() {
+        Thread {
+            try {
+                val url = java.net.URL("https://api.open-meteo.com/v1/forecast?latitude=57.1522&longitude=65.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FYekaterinburg")
+                val connection = (url.openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                    requestMethod = "GET"
+                }
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+                val current = org.json.JSONObject(body).getJSONObject("current")
+                val temp = current.getDouble("temperature_2m").toInt()
+                val feels = current.getDouble("apparent_temperature").toInt()
+                val wind = current.getDouble("wind_speed_10m").toInt()
+                val humidity = current.getInt("relative_humidity_2m")
+                val code = current.getInt("weather_code")
+                val description = when (code) {
+                    0 -> "Ясно"
+                    1, 2 -> "Переменная облачность"
+                    3 -> "Пасмурно"
+                    45, 48 -> "Туман"
+                    51, 53, 55 -> "Морось"
+                    56, 57 -> "Ледяная морось"
+                    61, 63, 65 -> "Дождь"
+                    66, 67 -> "Ледяной дождь"
+                    71, 73, 75, 77, 85, 86 -> "Снег"
+                    80, 81, 82 -> "Ливень"
+                    95, 96, 99 -> "Гроза"
+                    else -> "Погодные условия"
+                }
+                handler.post {
+                    if (::weatherView.isInitialized) {
+                        weatherView.text = "ТЮМЕНЬ   $temp°C\n$description  •  Ощущается $feels°C\nВетер $wind м/с  •  Влажность $humidity%"
+                    }
+                }
+            } catch (_: Exception) {
+                handler.post {
+                    if (::weatherView.isInitialized) weatherView.text = "ТЮМЕНЬ  •  Погода временно недоступна"
+                }
+            }
+        }.start()
     }
 
     private fun updateNetwork() {
