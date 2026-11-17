@@ -62,6 +62,7 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         loadApps()
+        applyInitialDockDefaults()
         buildHome()
     }
 
@@ -88,6 +89,19 @@ class MainActivity : Activity() {
                 info.loadLabel(packageManager).toString(), info.loadIcon(packageManager), pkg
             )
         }.distinctBy { it.pkg }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+    }
+
+    private fun applyInitialDockDefaults() {
+        if (prefs.getBoolean("dock_defaults_v2", false)) return
+        val vkVideo = apps.firstOrNull {
+            it.label.contains("VK Видео", ignoreCase = true) ||
+                (it.label.contains("видео", ignoreCase = true) && it.pkg.contains("vk", ignoreCase = true)) ||
+                it.pkg.contains("vkvideo", ignoreCase = true)
+        }
+        prefs.edit()
+            .putString("favorites", vkVideo?.pkg ?: "")
+            .putBoolean("dock_defaults_v2", true)
+            .apply()
     }
 
     private fun favorites(): MutableList<String> {
