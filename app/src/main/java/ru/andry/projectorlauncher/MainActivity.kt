@@ -163,7 +163,7 @@ class MainActivity : Activity() {
             isFocusable = true; isClickable = true
             setPadding(dp(12), dp(12), dp(12), dp(12))
             setOnFocusChangeListener { v, focused ->
-                v.background = rounded(if (focused) 0xEE0756A6.toInt() else 0x88202C50,
+                v.background = rounded(if (focused) 0xEE0756A6.toInt() else 0x88202C50.toInt(),
                     17, if (focused) 0xFF54D8FF.toInt() else 0x66FFFFFF, if (focused) 3 else 1)
                 v.scaleX = if (focused) 1.06f else 1f; v.scaleY = if (focused) 1.06f else 1f
             }
