@@ -129,9 +129,12 @@ class MainActivity : Activity() {
         }
         root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
 
-        val content = LinearLayout(this).apply {
+        val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(28), dp(18), dp(28), dp(8))
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
         }
         val pageScroll = ScrollView(this).apply {
             isFillViewport = true
@@ -140,7 +143,6 @@ class MainActivity : Activity() {
             isSmoothScrollingEnabled = true
         }
         pageScroll.addView(content, FrameLayout.LayoutParams(-1, -2))
-        root.addView(pageScroll, FrameLayout.LayoutParams(-1, -1))
 
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
         val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -218,9 +220,9 @@ class MainActivity : Activity() {
         }
         right.addView(settings, LinearLayout.LayoutParams(dp(54), dp(54)).apply { leftMargin = dp(10) })
         top.addView(right)
-        content.addView(top)
-
-        content.addView(Space(this), LinearLayout.LayoutParams(1, 0, 1f))
+        page.addView(top, LinearLayout.LayoutParams(-1, -2))
+        page.addView(pageScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
@@ -491,40 +493,11 @@ class MainActivity : Activity() {
     }
 
     private fun showAboutDeveloper() {
-        val logo = object : View(this) {
-            private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            override fun onDraw(canvas: Canvas) {
-                super.onDraw(canvas)
-                val w = width.toFloat()
-                val h = height.toFloat()
-                canvas.drawColor(Color.BLACK)
-                val scale = minOf(w / 1080f, h / 390f)
-                val ox = (w - 1080f * scale) / 2f
-                val oy = (h - 390f * scale) / 2f
-                canvas.save()
-                canvas.translate(ox, oy)
-                canvas.scale(scale, scale)
-                paint.color = Color.WHITE
-                paint.style = Paint.Style.FILL
-                val mark = Path().apply {
-                    moveTo(35f, 280f); lineTo(150f, 35f); lineTo(225f, 35f)
-                    lineTo(390f, 280f); lineTo(345f, 345f); lineTo(280f, 235f)
-                    lineTo(220f, 125f); lineTo(125f, 280f); close()
-                }
-                canvas.drawPath(mark, paint)
-                canvas.drawRect(35f, 295f, 295f, 365f, paint)
-                val cut = Path().apply {
-                    moveTo(170f, 205f); lineTo(230f, 205f); lineTo(200f, 150f); close()
-                }
-                paint.color = Color.BLACK
-                canvas.drawPath(cut, paint)
-                paint.color = Color.WHITE
-                paint.typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
-                paint.textSize = 185f
-                canvas.drawText("AM", 455f, 170f, paint)
-                canvas.drawText("PLAY", 455f, 350f, paint)
-                canvas.restore()
-            }
+        val logo = ImageView(this).apply {
+            setImageResource(R.drawable.am_play_logo)
+            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "AM PLAY"
         }
         val holder = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
