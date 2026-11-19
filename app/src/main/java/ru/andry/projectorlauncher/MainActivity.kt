@@ -240,7 +240,11 @@ class MainActivity : Activity() {
             })
         }
         val dockWidth = (resources.displayMetrics.widthPixels * 0.67f).toInt()
-        content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        val scrollTopSpacer = View(this)
+        content.addView(scrollTopSpacer, LinearLayout.LayoutParams(1, 0))
+        content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+        })
 
         val appsGrid = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -271,6 +275,12 @@ class MainActivity : Activity() {
         })
 
         setContentView(root)
+        pageScroll.post {
+            val spacerParams = scrollTopSpacer.layoutParams as LinearLayout.LayoutParams
+            spacerParams.height = (pageScroll.height - dock.height).coerceAtLeast(0)
+            scrollTopSpacer.layoutParams = spacerParams
+            pageScroll.scrollTo(0, 0)
+        }
         clockTick.run()
         updateNetwork()
         dock.post { dock.getChildAt(0)?.requestFocus() }
