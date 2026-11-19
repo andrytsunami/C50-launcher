@@ -189,7 +189,7 @@ class MainActivity : Activity() {
         right.addView(wifiIcon, iconParams())
         right.addView(btIcon, iconParams())
         val settings = ImageView(this).apply {
-            setImageDrawable(drawIcon("gear", Color.WHITE)); contentDescription = "Настройки"
+            setImageDrawable(drawIcon("menu", Color.WHITE)); contentDescription = "Меню"
             scaleType = ImageView.ScaleType.FIT_CENTER
             background = rounded(0x88202C50.toInt(), 17, 0x66FFFFFF, 1)
             isFocusable = true; isClickable = true
@@ -199,7 +199,7 @@ class MainActivity : Activity() {
                     17, if (focused) 0xFF54D8FF.toInt() else 0x66FFFFFF, if (focused) 3 else 1)
                 v.scaleX = if (focused) 1.06f else 1f; v.scaleY = if (focused) 1.06f else 1f
             }
-            setOnClickListener { showSettings() }
+            setOnClickListener { showMenu() }
         }
         right.addView(settings, LinearLayout.LayoutParams(dp(54), dp(54)).apply { leftMargin = dp(10) })
         top.addView(right)
@@ -374,6 +374,12 @@ class MainActivity : Activity() {
                 canvas.drawLine(22f, 72f, 70f, 24f, p); canvas.drawLine(17f, 80f, 28f, 77f, p)
                 canvas.drawLine(70f, 24f, 79f, 33f, p); canvas.drawLine(17f, 80f, 22f, 72f, p)
             }
+            "menu" -> {
+                p.strokeWidth = 9f
+                canvas.drawLine(15f, 25f, 81f, 25f, p)
+                canvas.drawLine(15f, 48f, 81f, 48f, p)
+                canvas.drawLine(15f, 71f, 81f, 71f, p)
+            }
         }
         return BitmapDrawable(resources, bitmap)
     }
@@ -437,13 +443,14 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun showSettings() {
+    private fun showMenu() {
         val items = arrayOf(
             "Настроить четыре приложения в доке",
             "Выбрать обои",
-            "Сделать ProjectorHome главным экраном"
+            "Сделать ProjectorHome главным экраном",
+            "О разработчике"
         )
-        AlertDialog.Builder(this).setTitle("Настройки ProjectorHome")
+        AlertDialog.Builder(this).setTitle("Меню ProjectorHome")
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> chooseDockApps()
@@ -455,8 +462,64 @@ class MainActivity : Activity() {
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
+                    3 -> showAboutDeveloper()
                 }
             }.setNegativeButton("Закрыть", null).show()
+    }
+
+    private fun showAboutDeveloper() {
+        val logo = object : View(this) {
+            private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val w = width.toFloat()
+                val h = height.toFloat()
+                canvas.drawColor(Color.BLACK)
+                val scale = minOf(w / 1080f, h / 390f)
+                val ox = (w - 1080f * scale) / 2f
+                val oy = (h - 390f * scale) / 2f
+                canvas.save()
+                canvas.translate(ox, oy)
+                canvas.scale(scale, scale)
+                paint.color = Color.WHITE
+                paint.style = Paint.Style.FILL
+                val mark = Path().apply {
+                    moveTo(35f, 280f); lineTo(150f, 35f); lineTo(225f, 35f)
+                    lineTo(390f, 280f); lineTo(345f, 345f); lineTo(280f, 235f)
+                    lineTo(220f, 125f); lineTo(125f, 280f); close()
+                }
+                canvas.drawPath(mark, paint)
+                canvas.drawRect(35f, 295f, 295f, 365f, paint)
+                val cut = Path().apply {
+                    moveTo(170f, 205f); lineTo(230f, 205f); lineTo(200f, 150f); close()
+                }
+                paint.color = Color.BLACK
+                canvas.drawPath(cut, paint)
+                paint.color = Color.WHITE
+                paint.typeface = Typeface.create("sans-serif-black", Typeface.NORMAL)
+                paint.textSize = 185f
+                canvas.drawText("AM", 455f, 170f, paint)
+                canvas.drawText("PLAY", 455f, 350f, paint)
+                canvas.restore()
+            }
+        }
+        val holder = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(12), dp(18), dp(4))
+            addView(logo, LinearLayout.LayoutParams(-1, dp(150)))
+            addView(TextView(this@MainActivity).apply {
+                text = "Разработчик ProjectorHome"
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(0xFFCCCCCC.toInt())
+                setPadding(0, dp(8), 0, dp(2))
+            }, LinearLayout.LayoutParams(-1, -2))
+        }
+        AlertDialog.Builder(this)
+            .setTitle("О разработчике")
+            .setView(holder)
+            .setPositiveButton("Закрыть", null)
+            .show()
     }
 
     private fun showAllApps() {
