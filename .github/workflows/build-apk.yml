@@ -34,6 +34,23 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Configure persistent signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ] || [ -z "$SIGNING_STORE_PASSWORD" ] || [ -z "$SIGNING_KEY_ALIAS" ] || [ -z "$SIGNING_KEY_PASSWORD" ]; then
+            echo "::error::Persistent signing secrets are not configured. Add the four repository Actions secrets before building."
+            exit 1
+          fi
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/projectorhome-signing.jks"
+          echo "SIGNING_STORE_FILE=$GITHUB_WORKSPACE/projectorhome-signing.jks" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=$SIGNING_STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
