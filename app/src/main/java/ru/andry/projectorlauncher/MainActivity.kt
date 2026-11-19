@@ -133,7 +133,14 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(28), dp(18), dp(28), dp(8))
         }
-        root.addView(content, FrameLayout.LayoutParams(-1, -1))
+        val pageScroll = ScrollView(this).apply {
+            isFillViewport = true
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isSmoothScrollingEnabled = true
+        }
+        pageScroll.addView(content, ScrollView.LayoutParams(-1, -2))
+        root.addView(pageScroll, FrameLayout.LayoutParams(-1, -1))
 
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
         val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -218,31 +225,39 @@ class MainActivity : Activity() {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
             dock.addView(appTile(app, true) {
                 if (app != null) launch(app.pkg) else chooseDockApps()
-            }, LinearLayout.LayoutParams(0, dp(98), 1f).apply {
+            }, LinearLayout.LayoutParams(0, dp(88), 1f).apply {
                 leftMargin = dp(5); rightMargin = dp(5)
             })
         }
         val dockWidth = (resources.displayMetrics.widthPixels * 0.67f).toInt()
         content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply { gravity = Gravity.CENTER_HORIZONTAL })
 
-        val allAppsScroll = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
+        val appsGrid = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(2), dp(4), dp(2), dp(8))
         }
-        val allAppsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        }
-        apps.forEach { app ->
-            allAppsRow.addView(appTile(app, false) { launch(app.pkg) },
-                LinearLayout.LayoutParams(dp(88), dp(82)).apply {
-                    leftMargin = dp(5); rightMargin = dp(5)
+        val columns = (resources.displayMetrics.widthPixels / resources.displayMetrics.density / 112f)
+            .toInt().coerceIn(5, 8)
+        apps.chunked(columns).forEach { rowApps ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            rowApps.forEach { app ->
+                row.addView(appTile(app, false) { launch(app.pkg) },
+                    LinearLayout.LayoutParams(0, dp(72), 1f).apply {
+                        leftMargin = dp(3); rightMargin = dp(3); topMargin = dp(3); bottomMargin = dp(3)
+                    })
+            }
+            repeat(columns - rowApps.size) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, dp(72), 1f).apply {
+                    leftMargin = dp(3); rightMargin = dp(3)
                 })
+            }
+            appsGrid.addView(row, LinearLayout.LayoutParams(-1, dp(78)))
         }
-        allAppsScroll.addView(allAppsRow)
-        content.addView(allAppsScroll, LinearLayout.LayoutParams(-1, dp(88)).apply {
-            topMargin = dp(10)
+        content.addView(appsGrid, LinearLayout.LayoutParams(-1, -2).apply {
+            topMargin = dp(8)
         })
 
         setContentView(root)
@@ -258,7 +273,7 @@ class MainActivity : Activity() {
             isFocusableInTouchMode = true
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             background = tileBackground(false, large)
-            setPadding(dp(5), dp(5), dp(5), dp(5))
+            setPadding(dp(if (large) 4 else 2), dp(if (large) 4 else 2), dp(if (large) 4 else 2), dp(if (large) 4 else 2))
             setOnFocusChangeListener { v, focused ->
                 v.background = tileBackground(focused, large)
                 v.elevation = if (focused) dp(14).toFloat() else dp(2).toFloat()
@@ -272,11 +287,11 @@ class MainActivity : Activity() {
                     scaleType = ImageView.ScaleType.FIT_CENTER
                 }, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
                 if (!large) addView(TextView(this@MainActivity).apply {
-                    text = app.label; textSize = 11f
+                    text = app.label; textSize = 9.5f
                     gravity = Gravity.CENTER; maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     setTextColor(Color.WHITE); setPadding(0, dp(3), 0, 0)
-                }, LinearLayout.LayoutParams(-1, dp(21)))
+                }, LinearLayout.LayoutParams(-1, dp(17)))
             } else addView(TextView(this@MainActivity).apply {
                 text = "+"; textSize = 38f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
             })
@@ -690,7 +705,7 @@ class MainActivity : Activity() {
         }
 
     private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
-        cornerRadius = dp(if (large) 15 else 13).toFloat()
+        cornerRadius = dp(if (large) 13 else 9).toFloat()
         setColor(if (focused) 0x5536C9E8 else if (large) 0x66142C55 else 0x99202B49.toInt())
         setStroke(dp(if (focused) 2 else 1), if (focused) 0xCCFFE36A.toInt() else 0x667FCBFF)
     }
