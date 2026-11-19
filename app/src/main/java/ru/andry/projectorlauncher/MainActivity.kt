@@ -285,7 +285,7 @@ class MainActivity : Activity() {
                 addView(ImageView(this@MainActivity).apply {
                     setImageDrawable(icon)
                     scaleType = ImageView.ScaleType.FIT_CENTER
-                }, LinearLayout.LayoutParams(dp(if (large) 58 else 38), dp(if (large) 58 else 38)))
+                }, LinearLayout.LayoutParams(dp(if (large) 46 else 30), dp(if (large) 46 else 30)))
                 if (!large) addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = 9.5f
                     gravity = Gravity.CENTER; maxLines = 1
