@@ -15,6 +15,26 @@ android {
         versionName '1.0.0'
     }
 
+    signingConfigs {
+        stable {
+            def signingStore = System.getenv("SIGNING_STORE_FILE")
+            if (signingStore != null) {
+                storeFile file(signingStore)
+                storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (System.getenv("SIGNING_STORE_FILE") != null) {
+                signingConfig signingConfigs.stable
+            }
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
