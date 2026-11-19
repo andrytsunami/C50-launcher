@@ -118,7 +118,7 @@ class MainActivity : Activity() {
     private fun buildHome() {
         val root = FrameLayout(this)
         val wallpaper = ImageView(this).apply {
-            setImageResource(when (prefs.getString("wallpaper", "tyumen")) {
+            setImageResource(when (prefs.getString("wallpaper", "pixel")) {
                 "pixel" -> R.drawable.wallpaper_pixel_sunset
                 "space" -> R.drawable.wallpaper_space
                 "srilanka" -> R.drawable.wallpaper_sri_lanka
@@ -537,7 +537,7 @@ class MainActivity : Activity() {
     private fun chooseWallpaper() {
         val names = arrayOf("Тюмень", "Закат в горах", "Космос", "Шри-Ланка")
         val values = arrayOf("tyumen", "pixel", "space", "srilanka")
-        val current = prefs.getString("wallpaper", "tyumen")
+        val current = prefs.getString("wallpaper", "pixel")
         val checked = values.indexOf(current).coerceAtLeast(0)
         AlertDialog.Builder(this).setTitle("Выберите обои")
             .setSingleChoiceItems(names, checked) { dialog, which ->
