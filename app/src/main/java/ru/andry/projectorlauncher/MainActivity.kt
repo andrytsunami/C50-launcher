@@ -125,165 +125,161 @@ class MainActivity : Activity() {
                 else -> R.drawable.tyumen_bridge_wallpaper
             })
             scaleType = ImageView.ScaleType.CENTER_CROP
-            contentDescription = "Ночной мост через Туру в Тюмени"
+            contentDescription = "Обои PhoneHome"
         }
         root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
 
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(28), dp(18), dp(28), dp(8))
+            setPadding(dp(18), dp(16), dp(18), dp(12))
         }
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        val pageScroll = ScrollView(this).apply {
-            isFillViewport = true
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            isSmoothScrollingEnabled = true
-        }
-        pageScroll.addView(content, FrameLayout.LayoutParams(-1, -2))
 
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-        val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val timeRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val timeBlock = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL }
         clock = TextView(this).apply {
-            text = "00:00"; textSize = 52f
+            text = "00:00"; textSize = 42f
             typeface = android.graphics.Typeface.create("sans-serif-light", 0)
-            setTextColor(Color.WHITE); gravity = Gravity.CENTER
-            background = rounded(0xCC101A35.toInt(), 15, 0x557FCBFF, 1)
-            setPadding(dp(12), 0, dp(12), dp(2))
+            setTextColor(Color.WHITE)
         }
         date = TextView(this).apply {
-            textSize = 18f; setTextColor(Color.WHITE)
-            setPadding(dp(16), 0, 0, 0)
+            textSize = 13f; setTextColor(0xFFE2E9F5.toInt())
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
-        timeRow.isClickable = true
-        timeRow.isFocusable = true
-        timeRow.contentDescription = "Открыть приложение Часы"
-        timeRow.setOnClickListener { openClockApp() }
-        timeRow.addView(clock)
-        timeRow.addView(View(this).apply { setBackgroundColor(0xCCFFFFFF.toInt()) },
-            LinearLayout.LayoutParams(dp(1), dp(48)).apply { leftMargin = dp(15) })
-        timeRow.addView(date)
-        clock.isClickable = true
-        date.isClickable = true
-        clock.setOnClickListener { openClockApp() }
-        date.setOnClickListener { openClockApp() }
-        left.addView(timeRow)
+        timeBlock.addView(clock)
+        timeBlock.addView(date)
+        header.addView(timeBlock, LinearLayout.LayoutParams(0, -2, 1f))
+
+        val settings = ImageView(this).apply {
+            setImageDrawable(drawIcon("gear", Color.WHITE))
+            contentDescription = "Настройки PhoneHome"
+            background = rounded(0x88202C50.toInt(), 18, 0x66FFFFFF, 1)
+            setPadding(dp(13), dp(13), dp(13), dp(13))
+            isClickable = true
+            setOnClickListener { showMenu() }
+        }
+        header.addView(settings, LinearLayout.LayoutParams(dp(48), dp(48)))
+        page.addView(header, LinearLayout.LayoutParams(-1, -2))
 
         val weather = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            background = rounded(0x77202C50, 14, 0x55FFFFFF, 1)
-            setPadding(dp(10), dp(6), dp(14), dp(6))
-            isFocusable = true; isClickable = true
-            contentDescription = "Обновить погоду нажатием"
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(0x88202C50.toInt(), 18, 0x55FFFFFF, 1)
+            setPadding(dp(12), dp(9), dp(14), dp(9))
+            isClickable = true
+            contentDescription = "Обновить погоду"
             setOnClickListener { loadWeather(true) }
-            setOnFocusChangeListener { v, focused ->
-                v.background = rounded(if (focused) 0xAA0756A6.toInt() else 0x77202C50,
-                    14, if (focused) 0xFF64D9FF.toInt() else 0x55FFFFFF, if (focused) 2 else 1)
-            }
         }
         weatherIcon = TextView(this).apply {
             text = prefs.getString("weather_icon", "🌙") ?: "🌙"
-            textSize = 34f
-            gravity = Gravity.CENTER
+            textSize = 30f; gravity = Gravity.CENTER
         }
-        weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
+        weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(48), dp(48)))
         weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", "Тюмень  •  Нажмите для обновления") ?: "Тюмень"
-            textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
+            text = prefs.getString("weather_text", "Тюмень • Нажмите для обновления") ?: "Тюмень"
+            textSize = 13f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
-        weather.addView(weatherText)
-        left.addView(weather, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
-        top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
+        weather.addView(weatherText, LinearLayout.LayoutParams(0, -2, 1f))
+        page.addView(weather, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
 
-        val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
-        wifiIcon = statusIcon("wifi", "Wi-Fi")
-        btIcon = statusIcon("bluetooth", "Bluetooth")
-        right.addView(wifiIcon, iconParams())
-        right.addView(btIcon, iconParams())
-        val settings = ImageView(this).apply {
-            setImageDrawable(drawIcon("menu", Color.WHITE)); contentDescription = "Меню"
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            background = rounded(0x88202C50.toInt(), 17, 0x66FFFFFF, 1)
-            isFocusable = true; isClickable = true
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            setOnFocusChangeListener { v, focused ->
-                v.background = rounded(if (focused) 0xEE0756A6.toInt() else 0x88202C50.toInt(),
-                    17, if (focused) 0xFF54D8FF.toInt() else 0x66FFFFFF, if (focused) 3 else 1)
-                v.scaleX = if (focused) 1.06f else 1f; v.scaleY = if (focused) 1.06f else 1f
-            }
-            setOnClickListener { showMenu() }
+        val appsScroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isFillViewport = false
         }
-        right.addView(settings, LinearLayout.LayoutParams(dp(54), dp(54)).apply { leftMargin = dp(10) })
-        top.addView(right)
-        page.addView(top, LinearLayout.LayoutParams(-1, -2))
-        page.addView(pageScroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(page, FrameLayout.LayoutParams(-1, -1))
-
-        val dock = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
-            descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            background = rounded(0xAA09152F.toInt(), 19, 0x668FCBFF, 1)
-            setPadding(dp(9), dp(8), dp(9), dp(8)); elevation = dp(12).toFloat()
-        }
-        val selected = favorites()
-        for (slot in 0..3) {
-            val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
-            dock.addView(appTile(app, true) {
-                if (app != null) launch(app.pkg) else chooseDockApps()
-            }, LinearLayout.LayoutParams(0, dp(88), 1f).apply {
-                leftMargin = dp(5); rightMargin = dp(5)
-            })
-        }
-        val dockWidth = (resources.displayMetrics.widthPixels * 0.67f).toInt()
-        val scrollTopSpacer = View(this)
-        content.addView(scrollTopSpacer, LinearLayout.LayoutParams(1, 0))
-        content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-        })
-
         val appsGrid = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(2), dp(4), dp(2), dp(8))
+            setPadding(0, dp(16), 0, dp(12))
         }
-        val columns = (resources.displayMetrics.widthPixels / resources.displayMetrics.density / 112f)
-            .toInt().coerceIn(5, 8)
+        val columns = 4
         apps.chunked(columns).forEach { rowApps ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
             rowApps.forEach { app ->
-                row.addView(appTile(app, false) { launch(app.pkg) },
-                    LinearLayout.LayoutParams(0, dp(72), 1f).apply {
-                        leftMargin = dp(3); rightMargin = dp(3); topMargin = dp(3); bottomMargin = dp(3)
+                row.addView(phoneAppTile(app) { launch(app.pkg) },
+                    LinearLayout.LayoutParams(0, dp(94), 1f).apply {
+                        leftMargin = dp(2); rightMargin = dp(2); topMargin = dp(5); bottomMargin = dp(5)
                     })
             }
             repeat(columns - rowApps.size) {
-                row.addView(View(this), LinearLayout.LayoutParams(0, dp(72), 1f).apply {
-                    leftMargin = dp(3); rightMargin = dp(3)
-                })
+                row.addView(View(this), LinearLayout.LayoutParams(0, dp(94), 1f))
             }
-            appsGrid.addView(row, LinearLayout.LayoutParams(-1, dp(78)))
+            appsGrid.addView(row, LinearLayout.LayoutParams(-1, dp(104)))
         }
-        content.addView(appsGrid, LinearLayout.LayoutParams(-1, -2).apply {
-            topMargin = dp(8)
-        })
+        appsScroll.addView(appsGrid, ViewGroup.LayoutParams(-1, -2))
+        page.addView(appsScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
-        setContentView(root)
-        pageScroll.post {
-            val spacerParams = scrollTopSpacer.layoutParams as LinearLayout.LayoutParams
-            spacerParams.height = (pageScroll.height - dock.height).coerceAtLeast(0)
-            scrollTopSpacer.layoutParams = spacerParams
-            pageScroll.scrollTo(0, 0)
+        val dock = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = rounded(0xCC09152F.toInt(), 24, 0x668FCBFF, 1)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            elevation = dp(8).toFloat()
         }
+        val selected = favorites()
+        for (slot in 0..3) {
+            val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
+            dock.addView(phoneDockTile(app) {
+                if (app != null) launch(app.pkg) else chooseDockApps()
+            }, LinearLayout.LayoutParams(0, dp(66), 1f).apply {
+                leftMargin = dp(3); rightMargin = dp(3)
+            })
+        }
+        page.addView(dock, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        root.addView(page, FrameLayout.LayoutParams(-1, -1))
+        setContentView(root)
         clockTick.run()
         updateNetwork()
-        dock.post { dock.getChildAt(0)?.requestFocus() }
+    }
+
+    private fun phoneAppTile(app: AppEntry, action: () -> Unit): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            background = rounded(0x66202B49, 17, 0x557FCBFF, 1)
+            setPadding(dp(4), dp(7), dp(4), dp(5))
+            setOnClickListener { action() }
+            val icon = app.icon.constantState?.newDrawable(resources)?.mutate() ?: app.icon
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(icon)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, LinearLayout.LayoutParams(dp(44), dp(44)))
+            addView(TextView(this@MainActivity).apply {
+                text = app.label
+                textSize = 10.5f
+                gravity = Gravity.CENTER
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setTextColor(Color.WHITE)
+                setPadding(0, dp(5), 0, 0)
+            }, LinearLayout.LayoutParams(-1, dp(20)))
+        }
+    }
+
+    private fun phoneDockTile(app: AppEntry?, action: () -> Unit): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            setOnClickListener { action() }
+            if (app == null) {
+                addView(TextView(this@MainActivity).apply {
+                    text = "+"; textSize = 30f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(-1, -1))
+            } else {
+                val icon = app.icon.constantState?.newDrawable(resources)?.mutate() ?: app.icon
+                addView(ImageView(this@MainActivity).apply {
+                    setImageDrawable(icon)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }, LinearLayout.LayoutParams(dp(42), dp(42)))
+            }
+        }
     }
 
     private fun appTile(app: AppEntry?, large: Boolean, action: () -> Unit): View {
@@ -482,10 +478,10 @@ class MainActivity : Activity() {
         val items = arrayOf(
             "Настроить четыре приложения в доке",
             "Выбрать обои",
-            "Сделать ProjectorHome главным экраном",
+            "Сделать PhoneHome главным экраном",
             "О разработчике"
         )
-        AlertDialog.Builder(this).setTitle("Меню ProjectorHome")
+        AlertDialog.Builder(this).setTitle("Меню PhoneHome")
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> chooseDockApps()
@@ -514,7 +510,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(12), dp(18), dp(4))
             addView(logo, LinearLayout.LayoutParams(-1, dp(150)))
             addView(TextView(this@MainActivity).apply {
-                text = "Разработчик ProjectorHome"
+                text = "Разработчик PhoneHome"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(0xFFCCCCCC.toInt())
