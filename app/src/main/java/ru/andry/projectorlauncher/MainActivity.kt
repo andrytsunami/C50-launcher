@@ -139,7 +139,7 @@ class MainActivity : Activity() {
             overScrollMode = View.OVER_SCROLL_NEVER
             isSmoothScrollingEnabled = true
         }
-        pageScroll.addView(content, ScrollView.LayoutParams(-1, -2))
+        pageScroll.addView(content, FrameLayout.LayoutParams(-1, -2))
         root.addView(pageScroll, FrameLayout.LayoutParams(-1, -1))
 
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
