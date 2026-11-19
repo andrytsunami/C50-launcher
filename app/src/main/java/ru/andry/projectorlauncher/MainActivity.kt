@@ -66,6 +66,9 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        val previousPackages = apps.map { it.pkg }
+        loadApps()
+        if (previousPackages != apps.map { it.pkg }) buildHome()
         handler.removeCallbacks(clockTick)
         clockTick.run()
         handler.removeCallbacks(weatherRefresh)
