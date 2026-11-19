@@ -8,7 +8,7 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'ru.andry.projectorlauncher'
+        applicationId 'ru.andry.phonehome'
         minSdk 28
         targetSdk 28
         versionCode 1
