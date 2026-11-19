@@ -104,7 +104,7 @@ class MainActivity : Activity() {
 
     private fun favorites(): MutableList<String> {
         val saved = prefs.getString("favorites", null)
-        if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(4).toMutableList()
+        if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(5).toMutableList()
         val vkVideo = apps.firstOrNull {
             it.label.contains("VK Видео", ignoreCase = true) ||
                 (it.label.contains("видео", ignoreCase = true) && it.pkg.contains("vk", ignoreCase = true)) ||
@@ -151,8 +151,8 @@ class MainActivity : Activity() {
         header.addView(timeBlock, LinearLayout.LayoutParams(0, -2, 1f))
 
         val settings = ImageView(this).apply {
-            setImageDrawable(drawIcon("gear", Color.WHITE))
-            contentDescription = "Настройки PhoneHome"
+            setImageDrawable(drawIcon("menu", Color.WHITE))
+            contentDescription = "Меню PhoneHome"
             background = rounded(0x88202C50.toInt(), 18, 0x66FFFFFF, 1)
             setPadding(dp(13), dp(13), dp(13), dp(13))
             isClickable = true
@@ -183,34 +183,32 @@ class MainActivity : Activity() {
         weather.addView(weatherText, LinearLayout.LayoutParams(0, -2, 1f))
         page.addView(weather, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
 
-        val appsScroll = ScrollView(this).apply {
+        val foldersScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = false
         }
-        val appsGrid = LinearLayout(this).apply {
+        val foldersGrid = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(16), 0, dp(12))
+            setPadding(0, dp(18), 0, dp(12))
         }
-        val columns = 4
-        apps.chunked(columns).forEach { rowApps ->
+        val ordered = orderedFolders()
+        ordered.chunked(2).forEach { rowFolders ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-            rowApps.forEach { app ->
-                row.addView(phoneAppTile(app) { launch(app.pkg) },
-                    LinearLayout.LayoutParams(0, dp(94), 1f).apply {
-                        leftMargin = dp(2); rightMargin = dp(2); topMargin = dp(5); bottomMargin = dp(5)
+            rowFolders.forEach { folder ->
+                row.addView(folderTile(folder) { showFolder(folder) },
+                    LinearLayout.LayoutParams(0, dp(112), 1f).apply {
+                        leftMargin = dp(4); rightMargin = dp(4); topMargin = dp(5); bottomMargin = dp(5)
                     })
             }
-            repeat(columns - rowApps.size) {
-                row.addView(View(this), LinearLayout.LayoutParams(0, dp(94), 1f))
-            }
-            appsGrid.addView(row, LinearLayout.LayoutParams(-1, dp(104)))
+            if (rowFolders.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, dp(112), 1f))
+            foldersGrid.addView(row, LinearLayout.LayoutParams(-1, dp(122)))
         }
-        appsScroll.addView(appsGrid, ViewGroup.LayoutParams(-1, -2))
-        page.addView(appsScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        foldersScroll.addView(foldersGrid, ViewGroup.LayoutParams(-1, -2))
+        page.addView(foldersScroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -220,7 +218,7 @@ class MainActivity : Activity() {
             elevation = dp(8).toFloat()
         }
         val selected = favorites()
-        for (slot in 0..3) {
+        for (slot in 0..4) {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
             dock.addView(phoneDockTile(app) {
                 if (app != null) launch(app.pkg) else chooseDockApps()
@@ -233,6 +231,141 @@ class MainActivity : Activity() {
         setContentView(root)
         clockTick.run()
         updateNetwork()
+    }
+
+    private data class AppFolder(val id: String, val title: String, val icon: String, val apps: List<AppEntry>)
+
+    private fun orderedFolders(): List<AppFolder> {
+        val buckets = linkedMapOf(
+            "communication" to mutableListOf<AppEntry>(),
+            "media" to mutableListOf<AppEntry>(),
+            "work" to mutableListOf<AppEntry>(),
+            "tools" to mutableListOf<AppEntry>(),
+            "games" to mutableListOf<AppEntry>(),
+            "other" to mutableListOf<AppEntry>()
+        )
+        apps.forEach { app ->
+            val label = app.label.lowercase(Locale("ru"))
+            val pkg = app.pkg.lowercase(Locale.US)
+            val category = try { packageManager.getApplicationInfo(app.pkg, 0).category } catch (_: Exception) { -1 }
+            val id = when {
+                category == android.content.pm.ApplicationInfo.CATEGORY_GAME ||
+                    listOf("game", "игр").any { label.contains(it) || pkg.contains(it) } -> "games"
+                listOf("telegram", "whatsapp", "viber", "messenger", "сообщ", "звон", "контакт", "vk", "discord")
+                    .any { label.contains(it) || pkg.contains(it) } -> "communication"
+                listOf("youtube", "видео", "video", "music", "музык", "player", "плеер", "gallery", "галере", "фото", "camera", "камера", "spotify")
+                    .any { label.contains(it) || pkg.contains(it) } -> "media"
+                listOf("office", "word", "excel", "docs", "документ", "почт", "gmail", "outlook", "calendar", "календар", "drive", "диск")
+                    .any { label.contains(it) || pkg.contains(it) } -> "work"
+                listOf("настрой", "settings", "файл", "file", "калькулятор", "calculator", "browser", "браузер", "chrome", "clock", "часы", "погода", "weather")
+                    .any { label.contains(it) || pkg.contains(it) } -> "tools"
+                else -> "other"
+            }
+            buckets[id]?.add(app)
+        }
+        val defs = listOf(
+            Triple("communication", "Общение", "message-circle"),
+            Triple("media", "Медиа", "play-circle"),
+            Triple("work", "Работа", "briefcase"),
+            Triple("tools", "Инструменты", "wrench"),
+            Triple("games", "Игры", "gamepad-2"),
+            Triple("other", "Другое", "grid-3x3")
+        )
+        val built = defs.map { (id, title, icon) -> AppFolder(id, title, icon, buckets[id].orEmpty().toList()) }
+            .filter { it.apps.isNotEmpty() }
+        val order = prefs.getString("folder_order", "")!!.split("|").filter { it.isNotBlank() }
+        return built.sortedBy { folder -> order.indexOf(folder.id).let { if (it < 0) Int.MAX_VALUE else it } }
+    }
+
+    private fun folderTile(folder: AppFolder, action: () -> Unit): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isClickable = true
+            background = rounded(0x77202B49, 19, 0x667FCBFF, 1)
+            setPadding(dp(8), dp(10), dp(8), dp(8))
+            setOnClickListener { action() }
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(drawIcon(folder.icon, Color.WHITE))
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, LinearLayout.LayoutParams(dp(38), dp(38)))
+            addView(TextView(this@MainActivity).apply {
+                text = folder.title
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                setPadding(0, dp(5), 0, 0)
+            }, LinearLayout.LayoutParams(-1, dp(22)))
+            addView(TextView(this@MainActivity).apply {
+                text = folder.apps.size.toString() + " приложений"
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(0xFFD6E5F5.toInt())
+            }, LinearLayout.LayoutParams(-1, dp(17)))
+        }
+    }
+
+    private fun showFolder(folder: AppFolder) {
+        AlertDialog.Builder(this)
+            .setTitle(folder.title + " · " + folder.apps.size)
+            .setItems(folder.apps.map { it.label }.toTypedArray()) { _, which ->
+                folder.apps.getOrNull(which)?.let { launch(it.pkg) }
+            }
+            .setNegativeButton("Закрыть", null)
+            .show()
+    }
+
+    private fun manageFolderOrder() {
+        val order = orderedFolders().toMutableList()
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this).apply {
+            addView(list)
+            layoutParams = ViewGroup.LayoutParams(-1, dp(360))
+        }
+        fun refresh() {
+            list.removeAllViews()
+            order.forEachIndexed { index, folder ->
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(8), dp(4), dp(4), dp(4))
+                    addView(TextView(this@MainActivity).apply {
+                        text = folder.title
+                        textSize = 15f
+                        setTextColor(Color.WHITE)
+                    }, LinearLayout.LayoutParams(0, dp(46), 1f))
+                    addView(TextView(this@MainActivity).apply {
+                        text = "↑"; textSize = 22f; gravity = Gravity.CENTER
+                        setTextColor(if (index > 0) Color.WHITE else 0x66777777)
+                        setPadding(dp(12), 0, dp(12), 0)
+                        setOnClickListener {
+                            if (index > 0) { val item = order.removeAt(index); order.add(index - 1, item); refresh() }
+                        }
+                    }, LinearLayout.LayoutParams(dp(48), dp(46)))
+                    addView(TextView(this@MainActivity).apply {
+                        text = "↓"; textSize = 22f; gravity = Gravity.CENTER
+                        setTextColor(if (index < order.lastIndex) Color.WHITE else 0x66777777)
+                        setPadding(dp(12), 0, dp(12), 0)
+                        setOnClickListener {
+                            if (index < order.lastIndex) { val item = order.removeAt(index); order.add(index + 1, item); refresh() }
+                        }
+                    }, LinearLayout.LayoutParams(dp(48), dp(46)))
+                }
+                list.addView(row)
+                list.addView(View(this).apply { setBackgroundColor(0x447FA8D8) }, LinearLayout.LayoutParams(-1, dp(1)))
+            }
+        }
+        refresh()
+        AlertDialog.Builder(this)
+            .setTitle("Порядок папок")
+            .setMessage("Перемещайте папки стрелками вверх и вниз.")
+            .setView(scroll)
+            .setPositiveButton("Сохранить") { _, _ ->
+                prefs.edit().putString("folder_order", order.joinToString("|") { it.id }).apply()
+                buildHome()
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun phoneAppTile(app: AppEntry, action: () -> Unit): View {
@@ -395,6 +528,17 @@ class MainActivity : Activity() {
                 canvas.drawCircle(48f, 48f, 37f, p); canvas.drawOval(RectF(31f, 11f, 65f, 85f), p)
                 canvas.drawLine(12f, 48f, 84f, 48f, p); canvas.drawArc(RectF(15f, 27f, 81f, 69f), 180f, 180f, false, p)
             }
+            "message-circle", "play-circle", "briefcase", "wrench", "gamepad-2", "grid-3x3" -> {
+                p.style = Paint.Style.STROKE
+                when (kind) {
+                    "message-circle" -> { canvas.drawCircle(48f, 43f, 31f, p); canvas.drawLine(28f, 66f, 20f, 82f, p); canvas.drawLine(20f, 82f, 40f, 73f, p) }
+                    "play-circle" -> { canvas.drawCircle(48f, 48f, 36f, p); p.style = Paint.Style.FILL; canvas.drawPath(Path().apply { moveTo(39f, 28f); lineTo(39f, 68f); lineTo(70f, 48f); close() }, p) }
+                    "briefcase" -> { canvas.drawRoundRect(RectF(12f, 30f, 84f, 78f), 8f, 8f, p); canvas.drawRoundRect(RectF(34f, 17f, 62f, 36f), 5f, 5f, p); canvas.drawLine(12f, 49f, 84f, 49f, p) }
+                    "wrench" -> { canvas.drawLine(29f, 70f, 68f, 31f, p); canvas.drawCircle(25f, 75f, 10f, p); canvas.drawArc(RectF(51f, 9f, 88f, 46f), 180f, 180f, false, p) }
+                    "gamepad-2" -> { canvas.drawRoundRect(RectF(9f, 31f, 87f, 76f), 17f, 17f, p); canvas.drawLine(29f, 43f, 29f, 64f, p); canvas.drawLine(18f, 54f, 40f, 54f, p); p.style = Paint.Style.FILL; canvas.drawCircle(67f, 49f, 5f, p); canvas.drawCircle(77f, 61f, 4f, p) }
+                    else -> { for (y in 0..2) for (x in 0..2) canvas.drawRoundRect(RectF(15f+x*23f,15f+y*23f,32f+x*23f,32f+y*23f),4f,4f,p) }
+                }
+            }
             "apps" -> {
                 p.style = Paint.Style.FILL
                 for (y in 0..2) for (x in 0..2) canvas.drawCircle(25f + x * 23f, 25f + y * 23f, 6f, p)
@@ -451,8 +595,8 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         val index = selected.indexOf(app.pkg)
                         if (index >= 0) selected.removeAt(index)
-                        else if (selected.size < 4) selected.add(app.pkg)
-                        else Toast.makeText(this@MainActivity, "В доке максимум 4 приложения", Toast.LENGTH_SHORT).show()
+                        else if (selected.size < 5) selected.add(app.pkg)
+                        else Toast.makeText(this@MainActivity, "В доке максимум 5 приложений", Toast.LENGTH_SHORT).show()
                         prefs.edit().putString("favorites", selected.joinToString("|")).apply()
                         refreshRows()
                     }
@@ -463,7 +607,7 @@ class MainActivity : Activity() {
         }
         refreshRows()
         AlertDialog.Builder(this)
-            .setTitle("Док: выберите до 4 приложений")
+            .setTitle("Док: выберите до 5 приложений")
             .setMessage("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.")
             .setView(scroll)
             .setPositiveButton("Готово", null)
@@ -474,8 +618,10 @@ class MainActivity : Activity() {
 
     private fun showMenu() {
         val items = arrayOf(
-            "Настроить четыре приложения в доке",
+            "Выбрать 5 приложений для дока",
             "Выбрать обои",
+            "Изменить порядок папок",
+            "Все приложения",
             "Сделать PhoneHome главным экраном",
             "О разработчике"
         )
@@ -484,14 +630,16 @@ class MainActivity : Activity() {
                 when (which) {
                     0 -> chooseDockApps()
                     1 -> chooseWallpaper()
-                    2 -> {
+                    2 -> manageFolderOrder()
+                    3 -> showAllApps()
+                    4 -> {
                         try { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
                         catch (_: Exception) {
                             try { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
-                    3 -> showAboutDeveloper()
+                    5 -> showAboutDeveloper()
                 }
             }.setNegativeButton("Закрыть", null).show()
     }
