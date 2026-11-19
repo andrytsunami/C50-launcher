@@ -116,14 +116,15 @@ class MainActivity : Activity() {
     private fun buildHome() {
         val root = FrameLayout(this)
         val wallpaper = ImageView(this).apply {
-            setImageResource(when (prefs.getString("wallpaper", "pixel")) {
+            val wallpaperRes = when (prefs.getString("wallpaper", "pixel")) {
                 "pixel" -> R.drawable.wallpaper_pixel_sunset
                 "space" -> R.drawable.wallpaper_space
                 "srilanka" -> R.drawable.wallpaper_sri_lanka
                 else -> R.drawable.tyumen_bridge_wallpaper
-            })
+            }
+            setImageBitmap(loadPortraitWallpaper(wallpaperRes))
             scaleType = ImageView.ScaleType.CENTER_CROP
-            contentDescription = "Обои PhoneHome"
+            contentDescription = "Обои PhoneHome, портретный формат 9:16"
         }
         root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
 
@@ -871,6 +872,23 @@ class MainActivity : Activity() {
 
     private fun launch(pkg: String) {
         packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) }
+    }
+
+    private fun loadPortraitWallpaper(resourceId: Int): Bitmap {
+        val source = BitmapFactory.decodeResource(resources, resourceId)
+        val targetRatio = 9f / 16f
+        val sourceRatio = source.width.toFloat() / source.height.toFloat()
+        val crop = if (sourceRatio > targetRatio) {
+            val cropWidth = (source.height * targetRatio).toInt().coerceAtLeast(1)
+            Bitmap.createBitmap(source, (source.width - cropWidth) / 2, 0, cropWidth, source.height)
+        } else {
+            val cropHeight = (source.width / targetRatio).toInt().coerceAtLeast(1)
+            Bitmap.createBitmap(source, 0, (source.height - cropHeight) / 2, source.width, cropHeight)
+        }
+        if (crop !== source) source.recycle()
+        val portrait = Bitmap.createScaledBitmap(crop, 1080, 1920, true)
+        if (portrait !== crop) crop.recycle()
+        return portrait
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
