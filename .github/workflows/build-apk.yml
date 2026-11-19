@@ -61,5 +61,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PhoneHome
-          path: app/build/outputs/apk/debug/ProjectorHome.apk
+          path: app/build/outputs/apk/debug/PhoneHome.apk
           if-no-files-found: error
