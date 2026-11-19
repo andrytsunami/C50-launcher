@@ -157,10 +157,18 @@ class MainActivity : Activity() {
             setPadding(dp(16), 0, 0, 0)
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
+        timeRow.isClickable = true
+        timeRow.isFocusable = true
+        timeRow.contentDescription = "Открыть приложение Часы"
+        timeRow.setOnClickListener { openClockApp() }
         timeRow.addView(clock)
         timeRow.addView(View(this).apply { setBackgroundColor(0xCCFFFFFF.toInt()) },
             LinearLayout.LayoutParams(dp(1), dp(48)).apply { leftMargin = dp(15) })
         timeRow.addView(date)
+        clock.isClickable = true
+        date.isClickable = true
+        clock.setOnClickListener { openClockApp() }
+        date.setOnClickListener { openClockApp() }
         left.addView(timeRow)
 
         val weather = LinearLayout(this).apply {
@@ -708,6 +716,32 @@ class MainActivity : Activity() {
         cornerRadius = dp(if (large) 13 else 9).toFloat()
         setColor(if (focused) 0x5536C9E8 else if (large) 0x66142C55 else 0x99202B49.toInt())
         setStroke(dp(if (focused) 2 else 1), if (focused) 0xCCFFE36A.toInt() else 0x667FCBFF)
+    }
+
+    private fun openClockApp() {
+        val intents = listOf(
+            Intent("android.intent.action.SHOW_ALARMS"),
+            Intent("android.intent.action.SET_ALARM")
+        )
+        for (intent in intents) {
+            try {
+                if (intent.resolveActivity(packageManager) != null) {
+                    startActivity(intent)
+                    return
+                }
+            } catch (_: Exception) { }
+        }
+        val clockApp = apps.firstOrNull {
+            val label = it.label.lowercase(Locale("ru"))
+            val pkg = it.pkg.lowercase(Locale.US)
+            label.contains("часы") || label == "clock" ||
+                pkg.contains("deskclock") || pkg.contains("clock")
+        }
+        if (clockApp != null) {
+            launch(clockApp.pkg)
+        } else {
+            Toast.makeText(this, "Приложение часов не найдено", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun launch(pkg: String) {
