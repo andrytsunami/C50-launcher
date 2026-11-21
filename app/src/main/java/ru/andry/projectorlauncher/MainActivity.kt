@@ -480,6 +480,11 @@ class MainActivity : Activity() {
 
     private fun showMenu() {
         val items = arrayOf(
+            "Настройки проектора",
+            "Wi-Fi",
+            "Bluetooth",
+            "Звук",
+            "Приложения",
             "Настроить четыре приложения в доке",
             "Выбрать обои",
             "Сделать ProjectorHome главным экраном",
@@ -488,18 +493,31 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this).setTitle("Меню ProjectorHome")
             .setItems(items) { _, which ->
                 when (which) {
-                    0 -> chooseDockApps()
-                    1 -> chooseWallpaper()
-                    2 -> {
+                    0 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.MainActivity")
+                    1 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.network.WifiSettingActivity")
+                    2 -> openSystemScreen("com.example.bluetoothsetting", "com.example.bluetoothsetting.MainActivity")
+                    3 -> openSystemScreen("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
+                    4 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.application.ApplicationActivity")
+                    5 -> chooseDockApps()
+                    6 -> chooseWallpaper()
+                    7 -> {
                         try { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
                         catch (_: Exception) {
                             try { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
-                    3 -> showAboutDeveloper()
+                    8 -> showAboutDeveloper()
                 }
             }.setNegativeButton("Закрыть", null).show()
+    }
+
+    private fun openSystemScreen(packageName: String, className: String) {
+        try {
+            startActivity(Intent().setClassName(packageName, className))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Этот раздел настроек не удалось открыть", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showAboutDeveloper() {
