@@ -228,7 +228,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
             background = rounded(0xAA09152F.toInt(), 19, 0x668FCBFF, 1)
-            setPadding(dp(9), dp(8), dp(9), dp(8)); elevation = dp(12).toFloat()
+            setPadding(dp(9), dp(10), dp(9), dp(10)); elevation = dp(12).toFloat()
         }
         lateinit var dockTitle: TextView
         val selected = favorites()
@@ -238,8 +238,9 @@ class MainActivity : Activity() {
                 dockTitle.text = focusedApp?.label ?: "Избранные приложения"
             }) {
                 if (app != null) launch(app.pkg) else chooseDockApps()
-            }, LinearLayout.LayoutParams(0, dp(82), 1f).apply {
-                leftMargin = dp(4); rightMargin = dp(4)
+            }, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
+                leftMargin = dp(6); rightMargin = dp(6)
+                topMargin = dp(4); bottomMargin = dp(4)
             })
         }
         val dockWidth = minOf((resources.displayMetrics.widthPixels * 0.82f).toInt(), dp(528))
@@ -256,11 +257,11 @@ class MainActivity : Activity() {
         val dockContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(dockTitle, LinearLayout.LayoutParams(-1, dp(24)))
-            addView(dock, LinearLayout.LayoutParams(-1, dp(98)))
+            addView(dock, LinearLayout.LayoutParams(-1, dp(100)))
         }
         val scrollTopSpacer = View(this)
         content.addView(scrollTopSpacer, LinearLayout.LayoutParams(1, 0))
-        content.addView(dockContainer, LinearLayout.LayoutParams(dockWidth, dp(122)).apply {
+        content.addView(dockContainer, LinearLayout.LayoutParams(dockWidth, dp(124)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
         })
 
@@ -320,7 +321,7 @@ class MainActivity : Activity() {
             setOnFocusChangeListener { v, focused ->
                 v.background = tileBackground(focused, large)
                 v.elevation = if (focused) dp(14).toFloat() else dp(2).toFloat()
-                v.scaleX = if (focused) 1.04f else 1f; v.scaleY = if (focused) 1.04f else 1f
+                v.scaleX = if (focused) 1.02f else 1f; v.scaleY = if (focused) 1.02f else 1f
                 onFocusChange(if (focused) app else null)
             }
             setOnClickListener { action() }
@@ -329,7 +330,7 @@ class MainActivity : Activity() {
                 addView(ImageView(this@MainActivity).apply {
                     setImageDrawable(icon)
                     scaleType = ImageView.ScaleType.FIT_CENTER
-                }, LinearLayout.LayoutParams(dp(if (large) 46 else 30), dp(if (large) 46 else 30)))
+                }, LinearLayout.LayoutParams(dp(if (large) 40 else 30), dp(if (large) 40 else 30)))
                 if (!large) addView(TextView(this@MainActivity).apply {
                     text = app.label; textSize = 9.5f
                     gravity = Gravity.CENTER; maxLines = 1
@@ -509,7 +510,11 @@ class MainActivity : Activity() {
             "Bluetooth",
             "Звук",
             "Приложения",
-            "Настроить четыре приложения в доке",
+            "Настроить пять приложений в доке",
+            "О планшете",
+            "Память и хранилище",
+            "Приложения и кэш",
+            "Все настройки Android",
             "Выбрать обои",
             "Сделать ProjectorHome главным экраном",
             "О разработчике"
@@ -531,9 +536,23 @@ class MainActivity : Activity() {
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
-                    8 -> showAboutDeveloper()
+                    8 -> openAndroidSettings(Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_SETTINGS)
+                    9 -> openAndroidSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Settings.ACTION_STORAGE_SETTINGS, Settings.ACTION_SETTINGS)
+                    10 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
+                    11 -> openAndroidSettings(Settings.ACTION_SETTINGS)
+                    12 -> showAboutDeveloper()
                 }
             }.setNegativeButton("Закрыть", null).show()
+    }
+
+    private fun openAndroidSettings(vararg actions: String) {
+        for (action in actions) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (_: Exception) { }
+        }
+        Toast.makeText(this, "Этот раздел Android недоступен в прошивке", Toast.LENGTH_SHORT).show()
     }
 
     private fun openSystemScreen(packageName: String, className: String) {
