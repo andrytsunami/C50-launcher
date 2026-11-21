@@ -537,7 +537,7 @@ class MainActivity : Activity() {
                         }
                     }
                     8 -> openAndroidSettings(Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_SETTINGS)
-                    9 -> openAndroidSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Settings.ACTION_STORAGE_SETTINGS, Settings.ACTION_SETTINGS)
+                    9 -> openAndroidSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Settings.ACTION_SETTINGS)
                     10 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
                     11 -> openAndroidSettings(Settings.ACTION_SETTINGS)
                     12 -> showAboutDeveloper()
