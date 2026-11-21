@@ -234,10 +234,10 @@ class MainActivity : Activity() {
         val selected = favorites()
         for (slot in 0..4) {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
-            dock.addView(appTile(app, true, {
-                if (app != null) launch(app.pkg) else chooseDockApps()
-            }) { focusedApp ->
+            dock.addView(appTile(app, true, { focusedApp ->
                 dockTitle.text = focusedApp?.label ?: "Избранные приложения"
+            }) {
+                if (app != null) launch(app.pkg) else chooseDockApps()
             }, LinearLayout.LayoutParams(0, dp(82), 1f).apply {
                 leftMargin = dp(4); rightMargin = dp(4)
             })
@@ -307,8 +307,8 @@ class MainActivity : Activity() {
     private fun appTile(
         app: AppEntry?,
         large: Boolean,
-        action: () -> Unit,
-        onFocusChange: (AppEntry?) -> Unit = {}
+        onFocusChange: (AppEntry?) -> Unit = {},
+        action: () -> Unit
     ): View {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
