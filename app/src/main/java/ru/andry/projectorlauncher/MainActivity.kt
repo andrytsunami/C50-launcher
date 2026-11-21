@@ -506,13 +506,10 @@ class MainActivity : Activity() {
     private fun showMenu() {
         val items = arrayOf(
             "Настройки проектора",
-            "Wi-Fi",
-            "Bluetooth",
             "Звук",
             "Приложения",
-            "Настроить пять приложений в доке",
+            "Добавить приложения в док",
             "О планшете",
-            "Память и хранилище",
             "Приложения и кэш",
             "Все настройки Android",
             "Выбрать обои",
@@ -523,24 +520,21 @@ class MainActivity : Activity() {
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.MainActivity")
-                    1 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.network.WifiSettingActivity")
-                    2 -> openSystemScreen("com.example.bluetoothsetting", "com.example.bluetoothsetting.MainActivity")
-                    3 -> openSystemScreen("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
-                    4 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.application.ApplicationActivity")
-                    5 -> chooseDockApps()
-                    6 -> chooseWallpaper()
-                    7 -> {
+                    1 -> openSystemScreen("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
+                    2 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.application.ApplicationActivity")
+                    3 -> chooseDockApps()
+                    4 -> openAndroidSettings(Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_SETTINGS)
+                    5 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
+                    6 -> openAndroidSettings(Settings.ACTION_SETTINGS)
+                    7 -> chooseWallpaper()
+                    8 -> {
                         try { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
                         catch (_: Exception) {
                             try { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
-                    8 -> openAndroidSettings(Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_SETTINGS)
-                    9 -> openAndroidSettings(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, Settings.ACTION_SETTINGS)
-                    10 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
-                    11 -> openAndroidSettings(Settings.ACTION_SETTINGS)
-                    12 -> showAboutDeveloper()
+                    9 -> showAboutDeveloper()
                 }
             }.setNegativeButton("Закрыть", null).show()
     }
