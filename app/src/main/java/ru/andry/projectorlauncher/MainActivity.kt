@@ -277,7 +277,7 @@ class MainActivity : Activity() {
         setContentView(root)
         pageScroll.post {
             val spacerParams = scrollTopSpacer.layoutParams as LinearLayout.LayoutParams
-            spacerParams.height = (pageScroll.height - dock.height).coerceAtLeast(0)
+            spacerParams.height = (pageScroll.height - dockContainer.height).coerceAtLeast(0)
             scrollTopSpacer.layoutParams = spacerParams
             pageScroll.scrollTo(0, 0)
         }
