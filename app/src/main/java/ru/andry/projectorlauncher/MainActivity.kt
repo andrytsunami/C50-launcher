@@ -106,7 +106,7 @@ class MainActivity : Activity() {
 
     private fun favorites(): MutableList<String> {
         val saved = prefs.getString("favorites", null)
-        if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(4).toMutableList()
+        if (saved != null) return saved.split("|").filter { it.isNotBlank() }.take(5).toMutableList()
         val vkVideo = apps.firstOrNull {
             it.label.contains("VK Видео", ignoreCase = true) ||
                 (it.label.contains("видео", ignoreCase = true) && it.pkg.contains("vk", ignoreCase = true)) ||
@@ -230,19 +230,37 @@ class MainActivity : Activity() {
             background = rounded(0xAA09152F.toInt(), 19, 0x668FCBFF, 1)
             setPadding(dp(9), dp(8), dp(9), dp(8)); elevation = dp(12).toFloat()
         }
+        lateinit var dockTitle: TextView
         val selected = favorites()
-        for (slot in 0..3) {
+        for (slot in 0..4) {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
-            dock.addView(appTile(app, true) {
+            dock.addView(appTile(app, true, {
                 if (app != null) launch(app.pkg) else chooseDockApps()
-            }, LinearLayout.LayoutParams(0, dp(88), 1f).apply {
-                leftMargin = dp(5); rightMargin = dp(5)
+            }) { focusedApp ->
+                dockTitle.text = focusedApp?.label ?: "Избранные приложения"
+            }, LinearLayout.LayoutParams(0, dp(82), 1f).apply {
+                leftMargin = dp(4); rightMargin = dp(4)
             })
         }
-        val dockWidth = (resources.displayMetrics.widthPixels * 0.67f).toInt()
+        val dockWidth = minOf((resources.displayMetrics.widthPixels * 0.82f).toInt(), dp(528))
+        dockTitle = TextView(this).apply {
+            text = "Избранные приложения"
+            textSize = 13f
+            setTextColor(0xFFEAF5FF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setPadding(dp(4), 0, dp(4), dp(5))
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val dockContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(dockTitle, LinearLayout.LayoutParams(-1, dp(24)))
+            addView(dock, LinearLayout.LayoutParams(-1, dp(98)))
+        }
         val scrollTopSpacer = View(this)
         content.addView(scrollTopSpacer, LinearLayout.LayoutParams(1, 0))
-        content.addView(dock, LinearLayout.LayoutParams(dockWidth, dp(114)).apply {
+        content.addView(dockContainer, LinearLayout.LayoutParams(dockWidth, dp(122)).apply {
             gravity = Gravity.CENTER_HORIZONTAL
         })
 
@@ -286,7 +304,12 @@ class MainActivity : Activity() {
         dock.post { dock.getChildAt(0)?.requestFocus() }
     }
 
-    private fun appTile(app: AppEntry?, large: Boolean, action: () -> Unit): View {
+    private fun appTile(
+        app: AppEntry?,
+        large: Boolean,
+        action: () -> Unit,
+        onFocusChange: (AppEntry?) -> Unit = {}
+    ): View {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
             isFocusable = true; isFocusableInTouchMode = true; isClickable = true
@@ -297,7 +320,8 @@ class MainActivity : Activity() {
             setOnFocusChangeListener { v, focused ->
                 v.background = tileBackground(focused, large)
                 v.elevation = if (focused) dp(14).toFloat() else dp(2).toFloat()
-                v.scaleX = if (focused) 1.07f else 1f; v.scaleY = if (focused) 1.07f else 1f
+                v.scaleX = if (focused) 1.04f else 1f; v.scaleY = if (focused) 1.04f else 1f
+                onFocusChange(if (focused) app else null)
             }
             setOnClickListener { action() }
             if (app != null) {
@@ -457,8 +481,8 @@ class MainActivity : Activity() {
                     setOnClickListener {
                         val index = selected.indexOf(app.pkg)
                         if (index >= 0) selected.removeAt(index)
-                        else if (selected.size < 4) selected.add(app.pkg)
-                        else Toast.makeText(this@MainActivity, "В доке максимум 4 приложения", Toast.LENGTH_SHORT).show()
+                        else if (selected.size < 5) selected.add(app.pkg)
+                        else Toast.makeText(this@MainActivity, "В доке максимум 5 приложений", Toast.LENGTH_SHORT).show()
                         prefs.edit().putString("favorites", selected.joinToString("|")).apply()
                         refreshRows()
                     }
@@ -469,7 +493,7 @@ class MainActivity : Activity() {
         }
         refreshRows()
         AlertDialog.Builder(this)
-            .setTitle("Док: выберите до 4 приложений")
+            .setTitle("Док: выберите до 5 приложений")
             .setMessage("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.")
             .setView(scroll)
             .setPositiveButton("Готово", null)
