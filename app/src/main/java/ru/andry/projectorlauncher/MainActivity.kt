@@ -122,6 +122,8 @@ class MainActivity : Activity() {
                 "pixel" -> R.drawable.wallpaper_pixel_sunset
                 "space" -> R.drawable.wallpaper_space
                 "srilanka" -> R.drawable.wallpaper_sri_lanka
+                "am_lightning" -> R.drawable.wallpaper_am_lightning
+                "soft_waves" -> R.drawable.wallpaper_soft_waves
                 else -> R.drawable.tyumen_bridge_wallpaper
             })
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -507,36 +509,46 @@ class MainActivity : Activity() {
         val items = arrayOf(
             "Настройки проектора",
             "Звук",
+            "Оформление",
             "Приложения",
-            "Добавить приложения в док",
-            "О планшете",
-            "Приложения и кэш",
-            "Все настройки Android",
-            "Выбрать обои",
-            "Сделать ProjectorHome главным экраном",
-            "О разработчике"
+            "Настроить док",
+            "Система",
+            "О ProjectorHome"
         )
-        AlertDialog.Builder(this).setTitle("Меню ProjectorHome")
+        AlertDialog.Builder(this).setTitle("ProjectorHome")
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.MainActivity")
                     1 -> openSystemScreen("com.android.tv.settings", "com.android.tv.settings.device.sound.SoundActivity")
-                    2 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.application.ApplicationActivity")
-                    3 -> chooseDockApps()
-                    4 -> openAndroidSettings(Settings.ACTION_DEVICE_INFO_SETTINGS, Settings.ACTION_SETTINGS)
-                    5 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
-                    6 -> openAndroidSettings(Settings.ACTION_SETTINGS)
-                    7 -> chooseWallpaper()
-                    8 -> {
+                    2 -> chooseWallpaper()
+                    3 -> openSystemScreen("com.zhiying.settings", "com.zhiying.settings.application.ApplicationActivity")
+                    4 -> chooseDockApps()
+                    5 -> showSystemMenu()
+                    6 -> showAboutProjectorHome()
+                }
+            }.setNegativeButton("Закрыть", null).show()
+    }
+
+    private fun showSystemMenu() {
+        val items = arrayOf(
+            "Приложения и кэш",
+            "Все настройки Android",
+            "Сделать ProjectorHome главным экраном"
+        )
+        AlertDialog.Builder(this).setTitle("Система")
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
+                    1 -> openAndroidSettings(Settings.ACTION_SETTINGS)
+                    2 -> {
                         try { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
                         catch (_: Exception) {
                             try { startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
                             catch (_: Exception) { startActivity(Intent(Settings.ACTION_SETTINGS)) }
                         }
                     }
-                    9 -> showAboutDeveloper()
                 }
-            }.setNegativeButton("Закрыть", null).show()
+            }.setNegativeButton("Назад", null).show()
     }
 
     private fun openAndroidSettings(vararg actions: String) {
@@ -557,7 +569,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun showAboutDeveloper() {
+    private fun showAboutProjectorHome() {
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.am_play_logo)
             adjustViewBounds = true
@@ -569,7 +581,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(12), dp(18), dp(4))
             addView(logo, LinearLayout.LayoutParams(-1, dp(150)))
             addView(TextView(this@MainActivity).apply {
-                text = "Разработчик ProjectorHome"
+                text = "Лёгкий домашний экран для проектора"
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(0xFFCCCCCC.toInt())
@@ -577,7 +589,7 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(-1, -2))
         }
         AlertDialog.Builder(this)
-            .setTitle("О разработчике")
+            .setTitle("О ProjectorHome")
             .setView(holder)
             .setPositiveButton("Закрыть", null)
             .show()
@@ -590,8 +602,8 @@ class MainActivity : Activity() {
     }
 
     private fun chooseWallpaper() {
-        val names = arrayOf("Тюмень", "Закат в горах", "Космос", "Шри-Ланка")
-        val values = arrayOf("tyumen", "pixel", "space", "srilanka")
+        val names = arrayOf("Тюмень", "Закат в горах", "Космос", "Шри-Ланка", "A M — электричество", "Мягкие волны")
+        val values = arrayOf("tyumen", "pixel", "space", "srilanka", "am_lightning", "soft_waves")
         val current = prefs.getString("wallpaper", "pixel")
         val checked = values.indexOf(current).coerceAtLeast(0)
         AlertDialog.Builder(this).setTitle("Выберите обои")
