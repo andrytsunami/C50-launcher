@@ -1,28 +1,89 @@
-# Projector Launcher
+# ProjectorHome
 
-A lightweight Android TV home screen for the SHAKACHU C50 projector.
+Лёгкий домашний экран для Android-проекторов и Android TV-приставок.
 
-## Target device
-- Android 9 / API 28
-- Minimum SDK: 28
-- Application ID: `ru.andry.projectorlauncher`
+> **Статус совместимости:** проект изначально разрабатывался для SHAKACHU C50 на Android 9 (API 28). Работа на других моделях, прошивках и разрешениях пока не подтверждена. Перед установкой на другое устройство обязательно проверьте возможность вернуть штатный лаунчер.
 
-## Current features
-- Landscape home screen
-- Large clock and date
-- Automatically discovers launchable apps
-- D-pad / OK remote navigation
-- Shortcut to Android Settings
-- No background service and no third-party runtime dependencies
+## Возможности
 
-## Build
-GitHub Actions builds a debug APK on pushes to `main` and on manual workflow dispatch.
+- Ландшафтный домашний экран
+- Часы и дата
+- Плитки установленных приложений
+- Управление с пульта: стрелки и OK
+- Избранные приложения в доке
+- Выбор обоев
+- Погода для Тюмени (координаты города заданы в приложении)
+- Быстрый доступ к настройкам Android
+- Нет сторонних runtime-библиотек и постоянно работающего фонового сервиса
 
-After a successful run, open **Actions → Build Projector Launcher → Artifacts** and download `projector-home-debug`.
+## Требования
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`.
+- Android 9 (API 28) или новее
+- Экран с ландшафтной ориентацией
+- Пульт или другое устройство ввода с навигацией по фокусу
 
-## Safe installation
-Install and test the APK without disabling the factory launcher. Select the new launcher as HOME only after confirming that it starts and remote navigation works. Keep the stock launcher enabled until the new one is fully tested.
+Минимальная версия Android в сборке: API 28. Это техническое требование APK, а не гарантия совместимости с каждой прошивкой.
 
-<!-- rebuild after removing invalid duplicate wallpaper resource -->
+## Скачать APK
+
+1. Откройте вкладку **Actions** в репозитории.
+2. Выберите последний успешный запуск **Build ProjectorHome**.
+3. Внизу страницы найдите **Artifacts**.
+4. Скачайте архив **ProjectorHome** и извлеките из него `ProjectorHome.apk`.
+
+APK собирается автоматически при push в `main`, запуске workflow вручную и для pull request. Для сборки не нужны личные GitHub Secrets.
+
+## Установка и безопасная проверка
+
+1. Установите APK обычным способом или через ADB.
+2. Сначала запустите ProjectorHome вручную и проверьте открытие приложений, работу стрелок и кнопки OK.
+3. Только после проверки назначайте его домашним экраном (HOME).
+4. **Не отключайте и не удаляйте штатный лаунчер.** Сохраните возможность вернуться к нему через настройки приложений или ADB.
+
+Пример установки через ADB:
+
+```bash
+adb install -r ProjectorHome.apk
+```
+
+Если после выбора ProjectorHome главным экраном что-то работает неправильно, вернитесь к выбору приложения HOME в настройках Android. На некоторых прошивках меню выбора HOME может отличаться или быть скрыто производителем.
+
+## Известные ограничения
+
+- Погода пока привязана к Тюмени; выбор города в интерфейсе не реализован.
+- Наличие системных разделов (звук, приложения, настройки) зависит от производителя и прошивки. Некоторые пункты могут быть недоступны на других устройствах.
+- Значки и список приложений зависят от того, какие приложения прошивка публикует как запускаемые.
+- Совместимость с другими проекторами и ТВ-приставками не заявляется без тестирования.
+
+## Сообщить об ошибке или запросить поддержку устройства
+
+Откройте вкладку **Issues** и укажите:
+- точную модель устройства;
+- версию Android (если известна);
+- что именно произошло;
+- шаги для повторения проблемы;
+- фото или скриншот ошибки (если есть).
+
+Не публикуйте в Issues пароли, токены, серийные номера и другие личные данные.
+
+## Сборка из исходников
+
+Проект использует Android Gradle Plugin 8.6.1, Kotlin 2.0.21, Gradle 8.7 и JDK 17.
+
+Выполните:
+
+```bash
+gradle --no-daemon assembleDebug
+```
+
+Готовый APK появится здесь:
+
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+Workflow GitHub Actions автоматически переименовывает его в `ProjectorHome.apk` и прикладывает к запуску как артефакт.
+
+## Лицензия
+
+Лицензия на повторное использование и распространение пока не выбрана. Публичная видимость репозитория сама по себе не означает предоставление лицензии на использование кода.
