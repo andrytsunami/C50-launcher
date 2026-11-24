@@ -46,12 +46,14 @@ class MainActivity : Activity() {
     data class WeatherLocation(val latitude: Double, val longitude: Double, val city: String)
     private val locationPermissionRequest = 4102
 
+    private fun tr(ru: String, en: String): String = if (Locale.getDefault().language == "ru") ru else en
+
     private val clockTick = object : Runnable {
         override fun run() {
             if (!::clock.isInitialized) return
             val now = Date()
             clock.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
-            date.text = SimpleDateFormat("EEEE\nd MMMM", Locale("ru")).format(now)
+            date.text = SimpleDateFormat("EEEE\nd MMMM", Locale.getDefault()).format(now)
             updateNetwork()
             handler.postDelayed(this, 30_000)
         }
@@ -169,7 +171,7 @@ class MainActivity : Activity() {
         }
         timeRow.isClickable = true
         timeRow.isFocusable = true
-        timeRow.contentDescription = "Открыть приложение Часы"
+        timeRow.contentDescription = tr("Открыть приложение Часы", "Open Clock app")
         timeRow.setOnClickListener { openClockApp() }
         timeRow.addView(clock)
         timeRow.addView(View(this).apply { setBackgroundColor(0xCCFFFFFF.toInt()) },
@@ -186,7 +188,7 @@ class MainActivity : Activity() {
             background = rounded(0x77202C50, 14, 0x55FFFFFF, 1)
             setPadding(dp(10), dp(6), dp(14), dp(6))
             isFocusable = true; isClickable = true
-            contentDescription = "Обновить погоду нажатием"
+            contentDescription = tr("Обновить погоду нажатием", "Tap to refresh weather")
             setOnClickListener { loadWeather(true) }
             setOnFocusChangeListener { v, focused ->
                 v.background = rounded(if (focused) 0xAA0756A6.toInt() else 0x77202C50,
@@ -200,7 +202,7 @@ class MainActivity : Activity() {
         }
         weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
         weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", (prefs.getString("weather_city", "Тюмень") ?: "Тюмень") + "  •  Нажмите для обновления") ?: "Тюмень"
+            text = prefs.getString("weather_text", (prefs.getString("weather_city", tr("Тюмень", "Tyumen")) ?: "Тюмень") + "  •  " + tr("Нажмите для обновления", "Tap to refresh")) ?: "Тюмень"
             textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
@@ -214,7 +216,7 @@ class MainActivity : Activity() {
         right.addView(wifiIcon, iconParams())
         right.addView(btIcon, iconParams())
         val settings = ImageView(this).apply {
-            setImageDrawable(drawIcon("menu", Color.WHITE)); contentDescription = "Меню"
+            setImageDrawable(drawIcon("menu", Color.WHITE)); contentDescription = tr("Меню", "Menu")
             scaleType = ImageView.ScaleType.FIT_CENTER
             background = rounded(0x88202C50.toInt(), 17, 0x66FFFFFF, 1)
             isFocusable = true; isClickable = true
@@ -243,7 +245,7 @@ class MainActivity : Activity() {
         for (slot in 0..4) {
             val app = apps.firstOrNull { it.pkg == selected.getOrNull(slot) }
             dock.addView(appTile(app, true, { focusedApp ->
-                dockTitle.text = focusedApp?.label ?: "Избранные приложения"
+                dockTitle.text = focusedApp?.label ?: tr("Избранные приложения", "Favorite apps")
             }) {
                 if (app != null) launch(app.pkg) else chooseDockApps()
             }, LinearLayout.LayoutParams(0, dp(68), 1f).apply {
@@ -253,7 +255,7 @@ class MainActivity : Activity() {
         }
         val dockWidth = minOf((resources.displayMetrics.widthPixels * 0.82f).toInt(), dp(528))
         dockTitle = TextView(this).apply {
-            text = "Избранные приложения"
+            text = tr("Избранные приложения", "Favorite apps")
             textSize = 13f
             setTextColor(0xFFEAF5FF.toInt())
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
@@ -491,7 +493,7 @@ class MainActivity : Activity() {
                         val index = selected.indexOf(app.pkg)
                         if (index >= 0) selected.removeAt(index)
                         else if (selected.size < 5) selected.add(app.pkg)
-                        else Toast.makeText(this@MainActivity, "В доке максимум 5 приложений", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(this@MainActivity, tr("В доке максимум 5 приложений", "The dock supports up to 5 apps"), Toast.LENGTH_SHORT).show()
                         prefs.edit().putString("favorites", selected.joinToString("|")).apply()
                         refreshRows()
                     }
@@ -502,24 +504,24 @@ class MainActivity : Activity() {
         }
         refreshRows()
         AlertDialog.Builder(this)
-            .setTitle("Док: выберите до 5 приложений")
-            .setMessage("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.")
+            .setTitle(tr("Док: выберите до 5 приложений", "Dock: choose up to 5 apps"))
+            .setMessage(tr("Нажмите, чтобы добавить. Нажмите ещё раз, чтобы убрать. Цифры показывают порядок.", "Tap to add or tap again to remove. Numbers show the order."))
             .setView(scroll)
-            .setPositiveButton("Готово", null)
-            .setNegativeButton("Закрыть", null)
+            .setPositiveButton(tr("Готово", "Done"), null)
+            .setNegativeButton(tr("Закрыть", "Close"), null)
             .setOnDismissListener { buildHome() }
             .show()
     }
 
     private fun showMenu() {
         val items = arrayOf(
-            "Настройки проектора",
-            "Звук",
-            "Оформление",
-            "Приложения",
-            "Настроить док",
-            "Система",
-            "О ProjectorHome"
+            tr("Настройки проектора", "Projector settings"),
+            tr("Звук", "Sound"),
+            tr("Оформление", "Appearance"),
+            tr("Приложения", "Apps"),
+            tr("Настроить док", "Customize dock"),
+            tr("Система", "System"),
+            tr("О ProjectorHome", "About ProjectorHome")
         )
         AlertDialog.Builder(this).setTitle("ProjectorHome")
             .setItems(items) { _, which ->
@@ -532,16 +534,16 @@ class MainActivity : Activity() {
                     5 -> showSystemMenu()
                     6 -> showAboutProjectorHome()
                 }
-            }.setNegativeButton("Закрыть", null).show()
+            }.setNegativeButton(tr("Закрыть", "Close"), null).show()
     }
 
     private fun showSystemMenu() {
         val items = arrayOf(
-            "Приложения и кэш",
-            "Все настройки Android",
-            "Сделать ProjectorHome главным экраном"
+            tr("Приложения и кэш", "Apps and cache"),
+            tr("Все настройки Android", "All Android settings"),
+            tr("Сделать ProjectorHome главным экраном", "Set ProjectorHome as the home screen")
         )
-        AlertDialog.Builder(this).setTitle("Система")
+        AlertDialog.Builder(this).setTitle(tr("Система", "System"))
             .setItems(items) { _, which ->
                 when (which) {
                     0 -> openAndroidSettings(Settings.ACTION_APPLICATION_SETTINGS, Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS, Settings.ACTION_SETTINGS)
@@ -554,7 +556,7 @@ class MainActivity : Activity() {
                         }
                     }
                 }
-            }.setNegativeButton("Назад", null).show()
+            }.setNegativeButton(tr("Назад", "Back"), null).show()
     }
 
     private fun openAndroidSettings(vararg actions: String) {
@@ -564,14 +566,14 @@ class MainActivity : Activity() {
                 return
             } catch (_: Exception) { }
         }
-        Toast.makeText(this, "Этот раздел Android недоступен в прошивке", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, tr("Этот раздел Android недоступен в прошивке", "This Android section is unavailable in this firmware"), Toast.LENGTH_SHORT).show()
     }
 
     private fun openSystemScreen(packageName: String, className: String) {
         try {
             startActivity(Intent().setClassName(packageName, className))
         } catch (_: Exception) {
-            Toast.makeText(this, "Этот раздел настроек не удалось открыть", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Этот раздел настроек не удалось открыть", "Could not open this settings section"), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -587,7 +589,7 @@ class MainActivity : Activity() {
             setPadding(dp(18), dp(12), dp(18), dp(4))
             addView(logo, LinearLayout.LayoutParams(-1, dp(150)))
             addView(TextView(this@MainActivity).apply {
-                text = "Лёгкий домашний экран для проектора"
+                text = tr("Лёгкий домашний экран для проектора", "A lightweight home screen for your projector")
                 textSize = 14f
                 gravity = Gravity.CENTER
                 setTextColor(0xFFCCCCCC.toInt())
@@ -595,35 +597,35 @@ class MainActivity : Activity() {
             }, LinearLayout.LayoutParams(-1, -2))
         }
         AlertDialog.Builder(this)
-            .setTitle("О ProjectorHome")
+            .setTitle(tr("О ProjectorHome", "About ProjectorHome"))
             .setView(holder)
-            .setPositiveButton("Закрыть", null)
+            .setPositiveButton(tr("Закрыть", "Close"), null)
             .show()
     }
 
     private fun showAllApps() {
-        AlertDialog.Builder(this).setTitle("Все приложения")
+        AlertDialog.Builder(this).setTitle(tr("Все приложения", "All apps"))
             .setItems(apps.map { it.label }.toTypedArray()) { _, which -> apps.getOrNull(which)?.let { launch(it.pkg) } }
-            .setNegativeButton("Закрыть", null).show()
+            .setNegativeButton(tr("Закрыть", "Close"), null).show()
     }
 
     private fun chooseWallpaper() {
-        val names = arrayOf("Тюмень", "Закат в горах", "Космос", "Шри-Ланка", "A M — электричество", "Мягкие волны")
+        val names = arrayOf("Тюмень", tr("Закат в горах", "Mountain sunset"), tr("Космос", "Space"), tr("Шри-Ланка", "Sri Lanka"), "A M — электричество", tr("Мягкие волны", "Soft waves"))
         val values = arrayOf("tyumen", "pixel", "space", "srilanka", "am_lightning", "soft_waves")
         val current = prefs.getString("wallpaper", "pixel")
         val checked = values.indexOf(current).coerceAtLeast(0)
-        AlertDialog.Builder(this).setTitle("Выберите обои")
+        AlertDialog.Builder(this).setTitle(tr("Выберите обои", "Choose wallpaper"))
             .setSingleChoiceItems(names, checked) { dialog, which ->
                 prefs.edit().putString("wallpaper", values[which]).apply()
                 dialog.dismiss()
                 buildHome()
             }
-            .setNegativeButton("Отмена", null).show()
+            .setNegativeButton(tr("Отмена", "Cancel"), null).show()
     }
 
     private fun launchByKeywords(words: List<String>) {
         val app = apps.firstOrNull { entry ->
-            val label = entry.label.lowercase(Locale("ru"))
+            val label = entry.label.lowercase(Locale.getDefault())
             words.any { label.contains(it) }
         }
         if (app != null) launch(app.pkg) else showAllApps()
@@ -637,7 +639,7 @@ class MainActivity : Activity() {
             return
         }
         weatherLoading = true
-        if (manual) weatherText.text = "Определяем местоположение…"
+        if (manual) weatherText.text = tr("Определяем местоположение…", "Detecting location…")
         Thread {
             var result: WeatherInfo? = null
             try {
@@ -656,7 +658,7 @@ class MainActivity : Activity() {
                         .putString("weather_icon", value.icon).apply()
                 } else {
                     val cached = prefs.getString("weather_text", null)
-                    weatherText.text = if (cached != null) "$cached\nНет связи с погодным сервисом" else "Погода недоступна"
+                    weatherText.text = if (cached != null) "$cached\n" + tr("Нет связи с погодным сервисом", "No connection to weather service") else tr("Погода недоступна", "Weather unavailable")
                 }
             }
         }.start()
@@ -669,10 +671,10 @@ class MainActivity : Activity() {
                 if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                     val last = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
                     if (last != null) {
-                        var city = "Ваше местоположение"
+                        var city = tr("Ваше местоположение", "Your location")
                         try {
                             @Suppress("DEPRECATION")
-                            val addresses = Geocoder(this, Locale("ru")).getFromLocation(last.latitude, last.longitude, 1)
+                            val addresses = Geocoder(this, Locale.getDefault()).getFromLocation(last.latitude, last.longitude, 1)
                             if (!addresses.isNullOrEmpty()) city = addresses[0].locality ?: addresses[0].subAdminArea ?: addresses[0].adminArea ?: city
                         } catch (_: Exception) { }
                         return WeatherLocation(last.latitude, last.longitude, city)
@@ -684,7 +686,7 @@ class MainActivity : Activity() {
         try {
             val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
             if (!json.optBoolean("success", false)) throw IllegalStateException("IP location unavailable")
-            val city = json.optString("city", "").ifBlank { json.optString("region", "Ваш регион") }
+            val city = json.optString("city", "").ifBlank { json.optString("region", tr("Ваш регион", "Your region")) }
             return WeatherLocation(json.getDouble("latitude"), json.getDouble("longitude"), city)
         } finally { connection.disconnect() }
     }
@@ -710,7 +712,7 @@ class MainActivity : Activity() {
                 ?.optJSONObject("summary")?.optString("symbol_code", "") ?: ""
             val icon = weatherIconFor(symbol, null)
             val text = location.city + "   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
-                "  •  Ветер " + wind + " м/с\nВлажность " + humidity + "%"
+                "  •  " + tr("Ветер", "Wind") + " " + wind + " " + tr("м/с", "m/s") + "\n" + tr("Влажность", "Humidity") + " " + humidity + "%"
             return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
     }
@@ -728,15 +730,15 @@ class MainActivity : Activity() {
             val humidity = current.getInt("relative_humidity_2m")
             val code = current.getInt("weather_code")
             val desc = when (code) {
-                0 -> "Ясно"; 1, 2 -> "Переменная облачность"; 3 -> "Пасмурно"
-                45, 48 -> "Туман"; 51, 53, 55 -> "Морось"; 56, 57 -> "Ледяная морось"
-                61, 63, 65 -> "Дождь"; 66, 67 -> "Ледяной дождь"; 71, 73, 75, 77, 85, 86 -> "Снег"
-                80, 81, 82 -> "Ливень"; 95, 96, 99 -> "Гроза"; else -> "Погодные условия"
+                0 -> tr("Ясно", "Clear"); 1, 2 -> tr("Переменная облачность", "Partly cloudy"); 3 -> tr("Пасмурно", "Overcast")
+                45, 48 -> tr("Туман", "Fog"); 51, 53, 55 -> tr("Морось", "Drizzle"); 56, 57 -> tr("Ледяная морось", "Freezing drizzle")
+                61, 63, 65 -> tr("Дождь", "Rain"); 66, 67 -> tr("Ледяной дождь", "Freezing rain"); 71, 73, 75, 77, 85, 86 -> tr("Снег", "Snow")
+                80, 81, 82 -> tr("Ливень", "Rain showers"); 95, 96, 99 -> tr("Гроза", "Thunderstorm"); else -> tr("Погодные условия", "Weather conditions")
             }
             val isDay = current.optInt("is_day", 1) == 1
             val icon = weatherIconForCode(code, isDay)
-            val text = location.city + "   " + signedTemp(temp) + "°C\n" + desc + "  •  Ощущается " + feels +
-                "°C\nВетер " + wind + " м/с  •  Влажность " + humidity + "%"
+            val text = location.city + "   " + signedTemp(temp) + "°C\n" + desc + "  •  " + tr("Ощущается", "Feels like") + " " + feels +
+                "°C\n" + tr("Ветер", "Wind") + " " + wind + " " + tr("м/с", "m/s") + "  •  " + tr("Влажность", "Humidity") + " " + humidity + "%"
             return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
     }
@@ -773,12 +775,12 @@ class MainActivity : Activity() {
     private fun weatherDescription(symbol: String): String {
         val s = symbol.lowercase(Locale.US)
         return when {
-            s.contains("thunder") -> "Гроза"; s.contains("snow") -> "Снег"
-            s.contains("sleet") -> "Мокрый снег"; s.contains("rain") -> "Дождь"
-            s.contains("fog") -> "Туман"; s.contains("partlycloudy") -> "Переменная облачность"
-            s.contains("cloudy") -> "Облачно"; s.contains("fair") -> "Переменная облачность"
-            s.contains("clearsky") -> "Ясно"
-            else -> "Погодные условия"
+            s.contains("thunder") -> tr("Гроза", "Thunderstorm"); s.contains("snow") -> tr("Снег", "Snow")
+            s.contains("sleet") -> tr("Мокрый снег", "Sleet"); s.contains("rain") -> tr("Дождь", "Rain")
+            s.contains("fog") -> tr("Туман", "Fog"); s.contains("partlycloudy") -> tr("Переменная облачность", "Partly cloudy")
+            s.contains("cloudy") -> tr("Облачно", "Cloudy"); s.contains("fair") -> tr("Переменная облачность", "Partly cloudy")
+            s.contains("clearsky") -> tr("Ясно", "Clear")
+            else -> tr("Погодные условия", "Weather conditions")
         }
     }
 
@@ -835,7 +837,7 @@ class MainActivity : Activity() {
         if (clockApp != null) {
             launch(clockApp.pkg)
         } else {
-            Toast.makeText(this, "Приложение часов не найдено", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, tr("Приложение часов не найдено", "Clock app not found"), Toast.LENGTH_SHORT).show()
         }
     }
 
