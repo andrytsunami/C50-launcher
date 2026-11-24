@@ -71,9 +71,19 @@
    adb shell settings get secure preferred_home_activity
    ```
 
-**Важно:** штатный лаунчер `com.zhiying.ytb.zy.tv` мы не отключаем и не удаляем. На SHAKACHU C50 также обнаружен пакет `com.newlink.wtprovision`, который может запускать штатный интерфейс напрямую. Не отключайте системные пакеты без отдельной проверки: это может лишить возможности вернуться к исходному интерфейсу.
+Чтобы штатный лаунчер не запускался после перезагрузки, на SHAKACHU C50 мы отключили его пакет:
 
-Если ProjectorHome работает неправильно, выберите штатный лаунчер в системном меню выбора HOME, если прошивка предоставляет такую возможность.
+```bash
+adb shell pm disable-user --user 0 com.zhiying.ytb.zy.tv
+```
+
+Чтобы снова включить штатный лаунчер:
+
+```bash
+adb shell pm enable --user 0 com.zhiying.ytb.zy.tv
+```
+
+**Важно:** отключение пакета проверено на SHAKACHU C50. Не удаляйте штатный лаунчер: команда `enable` позволяет вернуть его. На других устройствах имя пакета может отличаться.
 
 ## Известные ограничения
 
@@ -186,9 +196,19 @@ After installation:
    adb shell settings get secure preferred_home_activity
    ```
 
-**Important:** the stock launcher `com.zhiying.ytb.zy.tv` is not disabled or uninstalled. On the SHAKACHU C50, the `com.newlink.wtprovision` package was also found to launch the stock interface directly. Do not disable system packages without testing them separately; doing so may remove the ability to return to the original interface.
+To prevent the stock launcher from starting after reboot, we disabled its package on the SHAKACHU C50:
 
-If ProjectorHome does not work correctly, select the stock launcher in the system HOME app chooser, if the firmware provides one.
+```bash
+adb shell pm disable-user --user 0 com.zhiying.ytb.zy.tv
+```
+
+To enable the stock launcher again:
+
+```bash
+adb shell pm enable --user 0 com.zhiying.ytb.zy.tv
+```
+
+**Important:** disabling this package has been tested on the SHAKACHU C50. Do not uninstall the stock launcher; the `enable` command allows you to restore it. Package names may differ on other devices.
 
 ## Known limitations
 
