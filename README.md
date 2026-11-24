@@ -57,10 +57,23 @@
 После установки:
 
 1. Запустите ProjectorHome вручную и проверьте открытие приложений, работу стрелок и кнопки OK.
-2. Только после проверки назначайте его домашним экраном (HOME).
-3. **Не отключайте и не удаляйте штатный лаунчер.** Сохраните возможность вернуться к нему через настройки приложений или ADB.
+2. Назначьте ProjectorHome домашним экраном (HOME) через ADB:
+   ```bash
+   adb shell cmd package set-home-activity --user 0 ru.andry.projectorlauncher/.MainActivity
+   ```
+3. Откройте домашний экран и проверьте, что запускается ProjectorHome:
+   ```bash
+   adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
+   ```
+4. Проверьте, какое приложение назначено HOME:
+   ```bash
+   adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+   adb shell settings get secure preferred_home_activity
+   ```
 
-Если после выбора ProjectorHome главным экраном что-то работает неправильно, вернитесь к выбору приложения HOME в настройках Android. На некоторых прошивках меню выбора HOME может отличаться или быть скрыто производителем.
+**Важно:** штатный лаунчер `com.zhiying.ytb.zy.tv` мы не отключаем и не удаляем. На SHAKACHU C50 также обнаружен пакет `com.newlink.wtprovision`, который может запускать штатный интерфейс напрямую. Не отключайте системные пакеты без отдельной проверки: это может лишить возможности вернуться к исходному интерфейсу.
+
+Если ProjectorHome работает неправильно, выберите штатный лаунчер в системном меню выбора HOME, если прошивка предоставляет такую возможность.
 
 ## Известные ограничения
 
@@ -159,10 +172,23 @@ Before installing a new build:
 After installation:
 
 1. Launch ProjectorHome manually and test app launching, D-pad navigation, and the OK button.
-2. Set it as the HOME launcher only after testing.
-3. **Do not disable or uninstall the stock launcher.** Keep a way to switch back through Android app settings or ADB.
+2. Set ProjectorHome as the HOME app through ADB:
+   ```bash
+   adb shell cmd package set-home-activity --user 0 ru.andry.projectorlauncher/.MainActivity
+   ```
+3. Open the home screen and verify that ProjectorHome starts:
+   ```bash
+   adb shell am start -a android.intent.action.MAIN -c android.intent.category.HOME
+   ```
+4. Check which activity is assigned to HOME:
+   ```bash
+   adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
+   adb shell settings get secure preferred_home_activity
+   ```
 
-If something does not work correctly after setting ProjectorHome as the HOME app, return to the HOME app selection in Android settings. On some firmware versions, the HOME selection menu may be different or hidden by the manufacturer.
+**Important:** the stock launcher `com.zhiying.ytb.zy.tv` is not disabled or uninstalled. On the SHAKACHU C50, the `com.newlink.wtprovision` package was also found to launch the stock interface directly. Do not disable system packages without testing them separately; doing so may remove the ability to return to the original interface.
+
+If ProjectorHome does not work correctly, select the stock launcher in the system HOME app chooser, if the firmware provides one.
 
 ## Known limitations
 
