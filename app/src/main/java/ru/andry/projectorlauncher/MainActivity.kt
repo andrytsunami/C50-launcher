@@ -578,6 +578,11 @@ class MainActivity : Activity() {
     }
 
     private fun showAboutProjectorHome() {
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+        } catch (_: Exception) {
+            "unknown"
+        }
         val logo = ImageView(this).apply {
             setImageResource(R.drawable.am_play_logo)
             adjustViewBounds = true
@@ -594,6 +599,13 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setTextColor(0xFFCCCCCC.toInt())
                 setPadding(0, dp(8), 0, dp(2))
+            }, LinearLayout.LayoutParams(-1, -2))
+            addView(TextView(this@MainActivity).apply {
+                text = tr("Версия $versionName", "Version $versionName")
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setTextColor(0xFF9EACBF.toInt())
+                setPadding(0, dp(6), 0, dp(2))
             }, LinearLayout.LayoutParams(-1, -2))
         }
         AlertDialog.Builder(this)
