@@ -35,8 +35,44 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build debug APK
+      - name: Configure permanent signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in SIGNING_KEYSTORE_BASE64 SIGNING_STORE_PASSWORD SIGNING_KEY_ALIAS SIGNING_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing GitHub Actions secret: $name"
+              exit 1
+            fi
+          done
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/projectorhome-release.jks"
+          keytool -list -keystore "$RUNNER_TEMP/projectorhome-release.jks" -storepass "$SIGNING_STORE_PASSWORD" >/dev/null
+          {
+            echo "SIGNING_STORE_FILE=$RUNNER_TEMP/projectorhome-release.jks"
+            echo "SIGNING_STORE_PASSWORD=$SIGNING_STORE_PASSWORD"
+            echo "SIGNING_KEY_ALIAS=$SIGNING_KEY_ALIAS"
+            echo "SIGNING_KEY_PASSWORD=$SIGNING_KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Set development build number
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          VERSION_CODE=$((10000 + BUILD_NUMBER))
+          sed -i "s/versionCode [0-9][0-9]*/versionCode $VERSION_CODE/" app/build.gradle
+          sed -i "s/versionName '[^']*'/versionName '0.0.$BUILD_NUMBER-dev'/" app/build.gradle
+
+      - name: Build signed APK
         run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK signature
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
 
       - name: Prepare APK
         run: cp app/build/outputs/apk/debug/app-debug.apk ProjectorHome.apk
