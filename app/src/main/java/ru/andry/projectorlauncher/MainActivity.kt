@@ -1,16 +1,20 @@
 package ru.andry.projectorlauncher
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.net.wifi.WifiManager
+import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -39,6 +43,8 @@ class MainActivity : Activity() {
 
     data class AppEntry(val label: String, val icon: Drawable, val pkg: String)
     data class WeatherInfo(val text: String, val icon: String)
+    data class WeatherLocation(val latitude: Double, val longitude: Double, val city: String)
+    private val locationPermissionRequest = 4102
 
     private val clockTick = object : Runnable {
         override fun run() {
@@ -625,13 +631,20 @@ class MainActivity : Activity() {
 
     private fun loadWeather(manual: Boolean) {
         if (weatherLoading) return
+        if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED && !prefs.getBoolean("location_permission_asked", false)) {
+            prefs.edit().putBoolean("location_permission_asked", true).apply()
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), locationPermissionRequest)
+            return
+        }
         weatherLoading = true
-        if (manual) weatherText.text = "Тюмень  •  Обновляем…"
+        if (manual) weatherText.text = "Определяем местоположение…"
         Thread {
             var result: WeatherInfo? = null
-            try { result = fetchMetWeather() } catch (_: Exception) {
-                try { result = fetchOpenMeteoWeather() } catch (_: Exception) { }
-            }
+            try {
+                val loc = resolveWeatherLocation()
+                prefs.edit().putString("weather_city", loc.city).putFloat("weather_latitude", loc.latitude.toFloat()).putFloat("weather_longitude", loc.longitude.toFloat()).apply()
+                result = try { fetchMetWeather(loc) } catch (_: Exception) { fetchOpenMeteoWeather(loc) }
+            } catch (_: Exception) { }
             val value = result
             handler.post {
                 weatherLoading = false
@@ -643,14 +656,46 @@ class MainActivity : Activity() {
                         .putString("weather_icon", value.icon).apply()
                 } else {
                     val cached = prefs.getString("weather_text", null)
-                    weatherText.text = if (cached != null) "$cached\nНет связи с погодным сервисом" else "Тюмень  •  Погода недоступна"
+                    weatherText.text = if (cached != null) "$cached\nНет связи с погодным сервисом" else "Погода недоступна"
                 }
             }
         }.start()
     }
 
-    private fun fetchMetWeather(): WeatherInfo {
-        val connection = (URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=57.1522&lon=65.5272").openConnection() as HttpURLConnection).apply {
+    private fun resolveWeatherLocation(): WeatherLocation {
+        if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    val last = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                    if (last != null) {
+                        var city = "Ваше местоположение"
+                        try {
+                            @Suppress("DEPRECATION")
+                            val addresses = Geocoder(this, Locale("ru")).getFromLocation(last.latitude, last.longitude, 1)
+                            if (!addresses.isNullOrEmpty()) city = addresses[0].locality ?: addresses[0].subAdminArea ?: addresses[0].adminArea ?: city
+                        } catch (_: Exception) { }
+                        return WeatherLocation(last.latitude, last.longitude, city)
+                    }
+                }
+            } catch (_: SecurityException) { }
+        }
+        val connection = (URL("https://ipwho.is/").openConnection() as HttpURLConnection).apply { connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET" }
+        try {
+            val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            if (!json.optBoolean("success", false)) throw IllegalStateException("IP location unavailable")
+            val city = json.optString("city", "").ifBlank { json.optString("region", "Ваш регион") }
+            return WeatherLocation(json.getDouble("latitude"), json.getDouble("longitude"), city)
+        } finally { connection.disconnect() }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == locationPermissionRequest) loadWeather(true)
+    }
+
+    private fun fetchMetWeather(location: WeatherLocation): WeatherInfo {
+        val connection = (URL("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=" + location.latitude + "&lon=" + location.longitude).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
             setRequestProperty("User-Agent", "ProjectorHome/1.0 (https://github.com/andrytsunami/C50-launcher)")
         }
@@ -664,14 +709,14 @@ class MainActivity : Activity() {
             val symbol = first.getJSONObject("data").optJSONObject("next_1_hours")
                 ?.optJSONObject("summary")?.optString("symbol_code", "") ?: ""
             val icon = weatherIconFor(symbol, null)
-            val text = "Тюмень   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
+            val text = location.city + "   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
                 "  •  Ветер " + wind + " м/с\nВлажность " + humidity + "%"
             return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
     }
 
-    private fun fetchOpenMeteoWeather(): WeatherInfo {
-        val url = "https://api.open-meteo.com/v1/forecast?latitude=57.1522&longitude=65.5272&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=Asia%2FYekaterinburg"
+    private fun fetchOpenMeteoWeather(location: WeatherLocation): WeatherInfo {
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.latitude + "&longitude=" + location.longitude + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=auto"
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
         }
@@ -690,7 +735,7 @@ class MainActivity : Activity() {
             }
             val isDay = current.optInt("is_day", 1) == 1
             val icon = weatherIconForCode(code, isDay)
-            val text = "Тюмень   " + signedTemp(temp) + "°C\n" + desc + "  •  Ощущается " + feels +
+            val text = location.city + "   " + signedTemp(temp) + "°C\n" + desc + "  •  Ощущается " + feels +
                 "°C\nВетер " + wind + " м/с  •  Влажность " + humidity + "%"
             return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
