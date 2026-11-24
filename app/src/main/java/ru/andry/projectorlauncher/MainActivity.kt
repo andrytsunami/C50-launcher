@@ -135,7 +135,7 @@ class MainActivity : Activity() {
                 else -> R.drawable.tyumen_bridge_wallpaper
             })
             scaleType = ImageView.ScaleType.CENTER_CROP
-            contentDescription = "Ночной мост через Туру в Тюмени"
+            contentDescription = tr("Ночной мост через Туру в Тюмени", "Night bridge over the Tura River in Tyumen")
         }
         root.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
 
@@ -202,7 +202,7 @@ class MainActivity : Activity() {
         }
         weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
         weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", (prefs.getString("weather_city", tr("Тюмень", "Tyumen")) ?: "Тюмень") + "  •  " + tr("Нажмите для обновления", "Tap to refresh")) ?: "Тюмень"
+            text = prefs.getString("weather_text", (prefs.getString("weather_city", tr("Тюмень", "Tyumen")) ?: tr("Тюмень", "Tyumen")) + "  •  " + tr("Нажмите для обновления", "Tap to refresh")) ?: tr("Тюмень", "Tyumen")
             textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
@@ -610,7 +610,7 @@ class MainActivity : Activity() {
     }
 
     private fun chooseWallpaper() {
-        val names = arrayOf("Тюмень", tr("Закат в горах", "Mountain sunset"), tr("Космос", "Space"), tr("Шри-Ланка", "Sri Lanka"), "A M — электричество", tr("Мягкие волны", "Soft waves"))
+        val names = arrayOf(tr("Тюмень", "Tyumen"), tr("Закат в горах", "Mountain sunset"), tr("Космос", "Space"), tr("Шри-Ланка", "Sri Lanka"), "A M — " + tr("электричество", "Electricity"), tr("Мягкие волны", "Soft waves"))
         val values = arrayOf("tyumen", "pixel", "space", "srilanka", "am_lightning", "soft_waves")
         val current = prefs.getString("wallpaper", "pixel")
         val checked = values.indexOf(current).coerceAtLeast(0)
@@ -831,7 +831,7 @@ class MainActivity : Activity() {
         val clockApp = apps.firstOrNull {
             val label = it.label.lowercase(Locale("ru"))
             val pkg = it.pkg.lowercase(Locale.US)
-            label.contains("часы") || label == "clock" ||
+            label.contains("часы") || label.contains("clock") ||
                 pkg.contains("deskclock") || pkg.contains("clock")
         }
         if (clockApp != null) {
