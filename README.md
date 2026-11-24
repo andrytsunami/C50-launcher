@@ -39,20 +39,11 @@
 
 ## Установка и безопасная проверка
 
-**Важно: установить новую CI-сборку поверх уже установленной версии без предварительного удаления может не получиться.** GitHub Actions собирает debug APK на временном runner, поэтому подпись debug-сборки может отличаться от подписи предыдущей сборки. Android не разрешает обновление приложения с несовпадающей подписью.
+**Удалять предыдущую версию ProjectorHome перед обновлением не нужно.** Стабильные релизы подписываются одним постоянным ключом. Android проверяет подпись и разрешает установку новой версии поверх старой, сохраняя локальные данные приложения — выбранные обои и настройки дока.
 
-Перед установкой новой сборки:
+Скачайте `ProjectorHome.apk` из Assets последнего стабильного релиза и установите его обычным способом поверх установленной версии. Если Android сообщает об ошибке подписи, не удаляйте приложение сразу: сначала убедитесь, что устанавливаете именно официальный APK из раздела Releases, а не тестовую сборку из Actions.
 
-1. Удалите предыдущую версию ProjectorHome через настройки Android или командой ADB:
-   ```bash
-   adb uninstall ru.andry.projectorlauncher
-   ```
-2. Установите новый APK:
-   ```bash
-   adb install ProjectorHome.apk
-   ```
-
-**Внимание:** удаление приложения стирает его локальные настройки, включая выбранные обои и настройки дока.
+Тестовые сборки Actions также используют постоянный ключ, поэтому их можно устанавливать поверх предыдущих сборок этого проекта. Однако для обычного использования рекомендуется стабильный релиз.
 
 После установки:
 
@@ -164,20 +155,11 @@ The APK is built automatically on pushes to `main`, manual workflow runs, and pu
 
 ## Installation and safe testing
 
-**Important: installing a new CI build over an already installed version may fail unless the previous version is uninstalled first.** GitHub Actions builds the debug APK on a temporary runner, so the debug signing key may differ between builds. Android does not allow an app to be updated when the signing certificates do not match.
+**You do not need to uninstall the previous ProjectorHome version before updating.** Stable releases are signed with the same permanent signing key. Android verifies the signature and allows the new version to be installed over the old one while preserving local app data, including the selected wallpaper and dock settings.
 
-Before installing a new build:
+Download `ProjectorHome.apk` from the Assets section of the latest stable release and install it normally over the existing app. If Android reports a signature error, do not uninstall the app immediately: first make sure you are installing the official APK from Releases, not a test build from Actions.
 
-1. Uninstall the previous ProjectorHome version through Android settings or with ADB:
-   ```bash
-   adb uninstall ru.andry.projectorlauncher
-   ```
-2. Install the new APK:
-   ```bash
-   adb install ProjectorHome.apk
-   ```
-
-**Warning:** uninstalling the app deletes its local data, including the selected wallpaper and dock settings.
+GitHub Actions test builds also use the permanent signing key, so they can be installed over previous builds of this project. Stable releases are recommended for normal use.
 
 After installation:
 
