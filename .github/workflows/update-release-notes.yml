@@ -19,7 +19,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\\.[0-9]+\\.[0-9]+$ ]]; then
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
             echo "Version must use MAJOR.MINOR.PATCH format, for example 1.0.1"
             exit 1
           fi
@@ -29,9 +29,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          gh release edit "v$RELEASE_VERSION" \
-            --notes "ProjectorHome — лёгкий Android-лаунчер, изначально разработанный для проектора SHAKACHU C50 под Android 9 (API 28).
+          cat > release-notes.md <<'EOF'
+          ProjectorHome — лёгкий Android-лаунчер, изначально разработанный для проектора SHAKACHU C50 под Android 9 (API 28).
 
-Совместимость с другими проекторами, Android TV и ТВ-приставками не гарантируется и требует отдельной проверки.
+          Совместимость с другими проекторами, Android TV и ТВ-приставками не гарантируется и требует отдельной проверки.
 
-APK: ProjectorHome.apk"
+          APK: ProjectorHome.apk
+          EOF
+          gh release edit "v$RELEASE_VERSION" --notes-file release-notes.md
