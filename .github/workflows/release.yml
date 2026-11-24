@@ -19,6 +19,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
+          set -euo pipefail
           if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Version must use MAJOR.MINOR.PATCH format, for example 1.0.2"
             exit 1
@@ -31,6 +32,7 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
           for name in SIGNING_KEYSTORE_BASE64 SIGNING_STORE_PASSWORD SIGNING_KEY_ALIAS SIGNING_KEY_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "::error::Missing GitHub Actions secret: $name"
@@ -60,19 +62,23 @@ jobs:
       - name: Install Android SDK packages
         run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Restore permanent signing key
+      - name: Restore and validate permanent signing key
         env:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
         run: |
+          set -euo pipefail
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/projectorhome-release.jks"
-          keytool -list -keystore "$RUNNER_TEMP/projectorhome-release.jks" -storepass "${{ secrets.SIGNING_STORE_PASSWORD }}" >/dev/null
+          keytool -list -keystore "$RUNNER_TEMP/projectorhome-release.jks" -storepass "$SIGNING_STORE_PASSWORD" >/dev/null
 
       - name: Set app version
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          sed -i "s/versionCode [0-9][0-9]*/versionCode $BUILD_NUMBER/" app/build.gradle
+          set -euo pipefail
+          VERSION_CODE=$((20000 + BUILD_NUMBER))
+          sed -i "s/versionCode [0-9][0-9]*/versionCode $VERSION_CODE/" app/build.gradle
           sed -i "s/versionName '[^']*'/versionName '$RELEASE_VERSION'/" app/build.gradle
 
       - name: Build APK with permanent signature
@@ -85,8 +91,8 @@ jobs:
 
       - name: Verify APK signature
         run: |
-          apksigner verify --verbose app/build/outputs/apk/debug/app-debug.apk
-          apksigner verify --print-certs app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
 
       - name: Prepare APK
         run: cp app/build/outputs/apk/debug/app-debug.apk ProjectorHome.apk
