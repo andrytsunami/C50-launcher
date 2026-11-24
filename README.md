@@ -26,12 +26,16 @@
 
 ## Скачать APK
 
-1. Откройте вкладку **Actions** в репозитории.
-2. Выберите последний успешный запуск **Build ProjectorHome**.
-3. Внизу страницы найдите **Artifacts**.
-4. Скачайте архив **ProjectorHome** и извлеките из него `ProjectorHome.apk`.
+**Готовые стабильные версии:** откройте [Releases](https://github.com/andrytsunami/C50-launcher/releases) и скачайте `ProjectorHome.apk` в разделе **Assets** последнего релиза.
 
-APK собирается автоматически при push в `main`, запуске workflow вручную и для pull request. Для сборки не нужны личные GitHub Secrets.
+**Тестовые сборки:** доступны во вкладке **Actions** → успешный запуск **Build ProjectorHome** → **Artifacts**. Артефакты тестовых сборок хранятся 30 дней.
+
+Обычные изменения в `main` и pull request запускают тестовую сборку автоматически. Стабильный релиз публикуется отдельно через workflow **Publish ProjectorHome Release**:
+1. Откройте **Actions** → **Publish ProjectorHome Release** → **Run workflow**.
+2. Укажите номер версии в формате `MAJOR.MINOR.PATCH`, например `1.0.1` (без префикса `v`).
+3. Запустите workflow. После успешной сборки GitHub создаст тег `v1.0.1` и Release с APK в **Assets**.
+
+Для публикации релиза workflow использует разрешение `contents: write`. Личные GitHub Secrets для сборки не нужны.
 
 ## Установка и безопасная проверка
 
