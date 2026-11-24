@@ -200,7 +200,7 @@ class MainActivity : Activity() {
         }
         weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
         weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", "Тюмень  •  Нажмите для обновления") ?: "Тюмень"
+            text = prefs.getString("weather_text", (prefs.getString("weather_city", "Тюмень") ?: "Тюмень") + "  •  Нажмите для обновления") ?: "Тюмень"
             textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         }
