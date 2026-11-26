@@ -90,7 +90,7 @@ jobs:
 
       - name: Set app version
         env:
-          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -euo pipefail
