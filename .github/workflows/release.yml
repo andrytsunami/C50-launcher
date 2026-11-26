@@ -4,9 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version without the v prefix (for example 1.0.2)"
+        description: "Release version without the v prefix (for example 1.0.3)"
         required: true
         type: string
+  push:
+    branches:
+      - "release/*"
 
 permissions:
   contents: write
@@ -17,7 +20,7 @@ jobs:
     steps:
       - name: Validate version
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -73,7 +76,7 @@ jobs:
 
       - name: Set app version
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -euo pipefail
@@ -100,9 +103,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: v${{ inputs.version || github.ref_name }}
           target_commitish: ${{ github.sha }}
-          name: ProjectorHome v${{ inputs.version }}
+          name: ProjectorHome v${{ inputs.version || github.ref_name }}
           generate_release_notes: true
           make_latest: true
           files: ProjectorHome.apk
