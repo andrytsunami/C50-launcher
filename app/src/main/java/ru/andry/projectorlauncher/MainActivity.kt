@@ -36,13 +36,17 @@ class MainActivity : Activity() {
     private lateinit var date: TextView
     private lateinit var weatherText: TextView
     private lateinit var weatherIcon: TextView
+    private lateinit var tomorrowText: TextView
+    private lateinit var tomorrowIcon: TextView
     private lateinit var wifiIcon: ImageView
     private lateinit var btIcon: ImageView
+    private lateinit var wifiIndicator: TextView
+    private lateinit var btIndicator: TextView
     private var apps: List<AppEntry> = emptyList()
     private var weatherLoading = false
 
     data class AppEntry(val label: String, val icon: Drawable, val pkg: String)
-    data class WeatherInfo(val text: String, val icon: String)
+    data class WeatherInfo(val text: String, val icon: String, val tomorrowText: String = "", val tomorrowIcon: String = "🌤️")
     data class WeatherLocation(val latitude: Double, val longitude: Double, val city: String)
     private val locationPermissionRequest = 4102
 
@@ -154,20 +158,25 @@ class MainActivity : Activity() {
         }
         pageScroll.addView(content, FrameLayout.LayoutParams(-1, -2))
 
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP }
-        val left = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val top = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
         val timeRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         clock = TextView(this).apply {
-            text = "00:00"; textSize = 52f
-            typeface = android.graphics.Typeface.create("sans-serif-light", 0)
-            setTextColor(Color.WHITE); gravity = Gravity.CENTER
-            background = rounded(0xCC101A35.toInt(), 15, 0x557FCBFF, 1)
-            setPadding(dp(12), 0, dp(12), dp(2))
+            text = "00:00"
+            textSize = 58f
+            typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+            setTextColor(0xFFF3F1FF.toInt())
+            gravity = Gravity.CENTER
+            setShadowLayer(dp(5).toFloat(), 0f, 0f, 0x665A4B9B)
         }
         date = TextView(this).apply {
-            textSize = 18f; setTextColor(Color.WHITE)
-            setPadding(dp(16), 0, 0, 0)
-            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+            textSize = 17f
+            setTextColor(0xFFF3F1FF.toInt())
+            setPadding(dp(15), 0, 0, 0)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            setLineSpacing(dp(2).toFloat(), 1f)
         }
         timeRow.isClickable = true
         timeRow.isFocusable = true
@@ -175,69 +184,138 @@ class MainActivity : Activity() {
         timeRow.setOnClickListener { openClockApp() }
         timeRow.addView(clock)
         timeRow.addView(View(this).apply { setBackgroundColor(0xCCFFFFFF.toInt()) },
-            LinearLayout.LayoutParams(dp(1), dp(48)).apply { leftMargin = dp(15) })
+            LinearLayout.LayoutParams(dp(1), dp(54)).apply { leftMargin = dp(17) })
         timeRow.addView(date)
-        clock.isClickable = true
-        date.isClickable = true
         clock.setOnClickListener { openClockApp() }
         date.setOnClickListener { openClockApp() }
-        left.addView(timeRow)
+        top.addView(timeRow, LinearLayout.LayoutParams(0, -2, 1f))
 
-        val weather = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            background = rounded(0x77202C50, 14, 0x55FFFFFF, 1)
-            setPadding(dp(10), dp(6), dp(14), dp(6))
-            isFocusable = true; isClickable = true
-            contentDescription = tr("Обновить погоду нажатием", "Tap to refresh weather")
-            setOnClickListener { loadWeather(true) }
-            setOnFocusChangeListener { v, focused ->
-                v.background = rounded(if (focused) 0xAA0756A6.toInt() else 0x77202C50,
-                    14, if (focused) 0xFF64D9FF.toInt() else 0x55FFFFFF, if (focused) 2 else 1)
-            }
+        val right = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
         }
-        weatherIcon = TextView(this).apply {
-            text = prefs.getString("weather_icon", "🌙") ?: "🌙"
-            textSize = 34f
+        wifiIcon = ImageView(this)
+        wifiIndicator = TextView(this)
+        right.addView(statusPill("wifi", tr("Wi-Fi", "Wi-Fi")), quickPillParams())
+        btIcon = ImageView(this)
+        btIndicator = TextView(this)
+        right.addView(statusPill("bluetooth", tr("Bluetooth", "Bluetooth")), quickPillParams())
+        val settings = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-        }
-        weather.addView(weatherIcon, LinearLayout.LayoutParams(dp(56), dp(52)))
-        weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", (prefs.getString("weather_city", tr("Тюмень", "Tyumen")) ?: tr("Тюмень", "Tyumen")) + "  •  " + tr("Нажмите для обновления", "Tap to refresh")) ?: tr("Тюмень", "Tyumen")
-            textSize = 15f; setTextColor(Color.WHITE); setPadding(dp(8), 0, 0, 0); maxLines = 3
-            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
-        }
-        weather.addView(weatherText)
-        left.addView(weather, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(12) })
-        top.addView(left, LinearLayout.LayoutParams(0, -2, 1f))
-
-        val right = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.TOP or Gravity.END }
-        wifiIcon = statusIcon("wifi", "Wi-Fi")
-        btIcon = statusIcon("bluetooth", "Bluetooth")
-        right.addView(wifiIcon, iconParams())
-        right.addView(btIcon, iconParams())
-        val settings = ImageView(this).apply {
-            setImageDrawable(drawIcon("menu", Color.WHITE)); contentDescription = tr("Меню", "Menu")
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            background = rounded(0x88202C50.toInt(), 17, 0x66FFFFFF, 1)
-            isFocusable = true; isClickable = true
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = rounded(0x88332B69.toInt(), 24, 0x44FFFFFF, 1)
+            setPadding(dp(16), dp(10), dp(18), dp(10))
+            isFocusable = true
+            isClickable = true
             setOnFocusChangeListener { v, focused ->
-                v.background = rounded(if (focused) 0xEE0756A6.toInt() else 0x88202C50.toInt(),
-                    17, if (focused) 0xFF54D8FF.toInt() else 0x66FFFFFF, if (focused) 3 else 1)
-                v.scaleX = if (focused) 1.06f else 1f; v.scaleY = if (focused) 1.06f else 1f
+                v.background = rounded(if (focused) 0xCC5145A0.toInt() else 0x88332B69.toInt(),
+                    24, if (focused) 0xCCFFFFFF.toInt() else 0x44FFFFFF, 1)
+                v.scaleX = if (focused) 1.04f else 1f
+                v.scaleY = if (focused) 1.04f else 1f
             }
+            addView(ImageView(this@MainActivity).apply {
+                setImageDrawable(drawIcon("gear", 0xFFF5F2FF.toInt()))
+                scaleType = ImageView.ScaleType.FIT_CENTER
+            }, LinearLayout.LayoutParams(dp(25), dp(25)))
+            addView(TextView(this@MainActivity).apply {
+                text = tr("Настройки", "Settings")
+                textSize = 17f
+                setTextColor(0xFFF5F2FF.toInt())
+                typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+                setPadding(dp(10), 0, 0, 0)
+            })
             setOnClickListener { showMenu() }
         }
-        right.addView(settings, LinearLayout.LayoutParams(dp(54), dp(54)).apply { leftMargin = dp(10) })
+        right.addView(settings, LinearLayout.LayoutParams(-2, dp(52)).apply { leftMargin = dp(8) })
         top.addView(right)
-        page.addView(top, LinearLayout.LayoutParams(-1, -2))
+        page.addView(top, LinearLayout.LayoutParams(-1, dp(70)))
+
+        val dashboard = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(0, dp(10), 0, 0)
+        }
+        val weather = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = rounded(0x77332B69, 24, 0x44FFFFFF, 1)
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            isFocusable = true
+            isClickable = true
+            contentDescription = tr("Обновить прогноз погоды", "Refresh weather forecast")
+            setOnClickListener { loadWeather(true) }
+            setOnFocusChangeListener { v, focused ->
+                v.background = rounded(if (focused) 0x995448A0.toInt() else 0x77332B69,
+                    24, if (focused) 0xCCFFFFFF.toInt() else 0x44FFFFFF, 1)
+            }
+        }
+        weather.addView(TextView(this).apply {
+            text = tr("СЕГОДНЯ", "TODAY")
+            textSize = 17f
+            letterSpacing = 0.12f
+            gravity = Gravity.CENTER
+            setTextColor(0xFFF0EFFF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+        }, LinearLayout.LayoutParams(-1, dp(27)))
+        val currentWeatherRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        weatherIcon = TextView(this).apply {
+            text = prefs.getString("weather_icon", "☁️") ?: "☁️"
+            textSize = 43f
+            gravity = Gravity.CENTER
+        }
+        currentWeatherRow.addView(weatherIcon, LinearLayout.LayoutParams(dp(66), dp(62)))
+        weatherText = TextView(this).apply {
+            text = prefs.getString("weather_text", tr("Загрузка…", "Loading…")) ?: tr("Загрузка…", "Loading…")
+            textSize = 23f
+            setTextColor(0xFF8FEAFF.toInt())
+            gravity = Gravity.CENTER
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+            maxLines = 2
+        }
+        currentWeatherRow.addView(weatherText, LinearLayout.LayoutParams(-2, -2))
+        weather.addView(currentWeatherRow, LinearLayout.LayoutParams(-1, dp(66)))
+        val tomorrowRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+        tomorrowRow.addView(TextView(this@MainActivity).apply {
+            text = tr("ЗАВТРА", "TOMORROW")
+            textSize = 13f
+            setTextColor(0xFFD9D3F0.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+        })
+        tomorrowIcon = TextView(this).apply {
+            text = "🌧️"
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setPadding(dp(9), 0, dp(4), 0)
+        }
+        tomorrowRow.addView(tomorrowIcon)
+        tomorrowText = TextView(this).apply {
+            text = prefs.getString("weather_tomorrow_text", "—")
+            textSize = 17f
+            setTextColor(0xFFF5F2FF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+        }
+        tomorrowRow.addView(tomorrowText)
+        weather.addView(tomorrowRow, LinearLayout.LayoutParams(-1, dp(34)))
+        dashboard.addView(weather, LinearLayout.LayoutParams(dp(300), dp(190)))
+
+        val calendarCard = buildCalendarCard()
+        dashboard.addView(calendarCard, LinearLayout.LayoutParams(0, dp(190), 1f).apply {
+            leftMargin = dp(18)
+        })
+        content.addView(dashboard, LinearLayout.LayoutParams(-1, dp(210)))
         page.addView(pageScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
         val dock = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
-            background = rounded(0xAA09152F.toInt(), 19, 0x668FCBFF, 1)
+            background = rounded(0xAA17142F.toInt(), 22, 0x44FFFFFF, 1)
             setPadding(dp(9), dp(10), dp(9), dp(10)); elevation = dp(12).toFloat()
         }
         lateinit var dockTitle: TextView
@@ -253,7 +331,7 @@ class MainActivity : Activity() {
                 topMargin = dp(4); bottomMargin = dp(4)
             })
         }
-        val dockWidth = minOf((resources.displayMetrics.widthPixels * 0.82f).toInt(), dp(528))
+        val dockWidth = minOf((resources.displayMetrics.widthPixels * 0.82f).toInt(), dp(650))
         dockTitle = TextView(this).apply {
             text = tr("Избранные приложения", "Favorite apps")
             textSize = 13f
@@ -306,7 +384,7 @@ class MainActivity : Activity() {
         setContentView(root)
         pageScroll.post {
             val spacerParams = scrollTopSpacer.layoutParams as LinearLayout.LayoutParams
-            spacerParams.height = (pageScroll.height - dockContainer.height).coerceAtLeast(0)
+            spacerParams.height = (pageScroll.height - dashboard.height - dockContainer.height).coerceAtLeast(0)
             scrollTopSpacer.layoutParams = spacerParams
             pageScroll.scrollTo(0, 0)
         }
@@ -389,7 +467,105 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun iconParams() = LinearLayout.LayoutParams(dp(50), dp(50)).apply { rightMargin = dp(5) }
+    private fun quickPillParams() = LinearLayout.LayoutParams(-2, dp(52)).apply { rightMargin = dp(8) }
+
+    private fun statusPill(kind: String, label: String): View {
+        val icon = if (kind == "wifi") wifiIcon else btIcon
+        val indicator = if (kind == "wifi") wifiIndicator else btIndicator
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            background = rounded(0x88332B69.toInt(), 24, 0x44FFFFFF, 1)
+            setPadding(dp(14), dp(8), dp(15), dp(8))
+            isFocusable = true
+            isClickable = true
+            addView(icon, LinearLayout.LayoutParams(dp(26), dp(26)))
+            addView(TextView(this@MainActivity).apply {
+                text = label
+                textSize = 16f
+                setTextColor(0xFFF5F2FF.toInt())
+                typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+                setPadding(dp(8), 0, dp(8), 0)
+            })
+            addView(indicator, LinearLayout.LayoutParams(dp(12), dp(12)))
+            setOnFocusChangeListener { v, focused ->
+                v.background = rounded(if (focused) 0xCC5145A0.toInt() else 0x88332B69.toInt(),
+                    24, if (focused) 0xCCFFFFFF.toInt() else 0x44FFFFFF, 1)
+            }
+            setOnClickListener {
+                val action = if (kind == "wifi") Settings.ACTION_WIFI_SETTINGS else Settings.ACTION_BLUETOOTH_SETTINGS
+                try { startActivity(Intent(action)) } catch (_: Exception) {
+                    try { startActivity(Intent(Settings.ACTION_SETTINGS)) } catch (_: Exception) { }
+                }
+            }
+        }
+    }
+
+    private fun buildCalendarCard(): View {
+        val now = java.util.Calendar.getInstance()
+        val monthTitle = SimpleDateFormat("LLLL yyyy", Locale.getDefault()).format(now.time)
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(0x77332B69, 24, 0x44FFFFFF, 1)
+            setPadding(dp(18), dp(12), dp(18), dp(10))
+        }
+        card.addView(TextView(this).apply {
+            text = monthTitle.uppercase(Locale.getDefault())
+            textSize = 15f
+            letterSpacing = 0.08f
+            gravity = Gravity.CENTER
+            setTextColor(0xFFF0EFFF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
+        }, LinearLayout.LayoutParams(-1, dp(25)))
+        val grid = android.widget.GridLayout(this).apply {
+            columnCount = 7
+            rowCount = 7
+            alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS
+            useDefaultMargins = false
+        }
+        val weekdays = arrayOf("П", "В", "С", "Ч", "П", "С", "В")
+        weekdays.forEach { day ->
+            grid.addView(TextView(this).apply {
+                text = if (Locale.getDefault().language == "ru") day else when (day) {
+                    "П" -> "M"; "В" -> "T"; "С" -> "W"; "Ч" -> "T"; else -> "F"
+                }
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setTextColor(0xFFC9C2E5.toInt())
+            }, android.widget.GridLayout.LayoutParams().apply {
+                width = 0; height = dp(20)
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+            })
+        }
+        val calendar = now.clone() as java.util.Calendar
+        calendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
+        val offset = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+        val days = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+        for (cell in 0 until 42) {
+            val dayNumber = cell - offset + 1
+            val isCurrent = dayNumber in 1..days
+            val isToday = isCurrent && dayNumber == now.get(java.util.Calendar.DAY_OF_MONTH)
+            val dayView = TextView(this).apply {
+                text = if (isCurrent) dayNumber.toString() else ""
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setTextColor(if (isToday) Color.WHITE else 0xFFE7E2F7.toInt())
+                if (isToday) {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(0xFF6558B8.toInt())
+                    }
+                }
+            }
+            grid.addView(dayView, android.widget.GridLayout.LayoutParams().apply {
+                width = 0; height = dp(17)
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+            })
+        }
+        card.addView(grid, LinearLayout.LayoutParams(-1, 0, 1f))
+        return card
+    }
 
     private fun drawIcon(kind: String, color: Int): Drawable {
         val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
@@ -651,13 +827,13 @@ class MainActivity : Activity() {
             return
         }
         weatherLoading = true
-        if (manual) weatherText.text = tr("Определяем местоположение…", "Detecting location…")
+        if (manual) weatherText.text = tr("Загрузка…", "Loading…")
         Thread {
             var result: WeatherInfo? = null
             try {
                 val loc = resolveWeatherLocation()
                 prefs.edit().putString("weather_city", loc.city).putFloat("weather_latitude", loc.latitude.toFloat()).putFloat("weather_longitude", loc.longitude.toFloat()).apply()
-                result = try { fetchMetWeather(loc) } catch (_: Exception) { fetchOpenMeteoWeather(loc) }
+                result = fetchOpenMeteoWeather(loc)
             } catch (_: Exception) { }
             val value = result
             handler.post {
@@ -666,11 +842,17 @@ class MainActivity : Activity() {
                 if (value != null) {
                     weatherText.text = value.text
                     weatherIcon.text = value.icon
+                    tomorrowText.text = value.tomorrowText
+                    tomorrowIcon.text = value.tomorrowIcon
                     prefs.edit().putString("weather_text", value.text)
-                        .putString("weather_icon", value.icon).apply()
+                        .putString("weather_icon", value.icon)
+                        .putString("weather_tomorrow_text", value.tomorrowText)
+                        .putString("weather_tomorrow_icon", value.tomorrowIcon).apply()
                 } else {
                     val cached = prefs.getString("weather_text", null)
-                    weatherText.text = if (cached != null) "$cached\n" + tr("Нет связи с погодным сервисом", "No connection to weather service") else tr("Погода недоступна", "Weather unavailable")
+                    weatherText.text = cached ?: tr("Нет данных", "No data")
+                    tomorrowText.text = prefs.getString("weather_tomorrow_text", "—") ?: "—"
+                    tomorrowIcon.text = prefs.getString("weather_tomorrow_icon", "🌧️") ?: "🌧️"
                 }
             }
         }.start()
@@ -723,14 +905,13 @@ class MainActivity : Activity() {
             val symbol = first.getJSONObject("data").optJSONObject("next_1_hours")
                 ?.optJSONObject("summary")?.optString("symbol_code", "") ?: ""
             val icon = weatherIconFor(symbol, null)
-            val text = location.city + "   " + signedTemp(temp) + "°C\n" + weatherDescription(symbol) +
-                "  •  " + tr("Ветер", "Wind") + " " + wind + " " + tr("м/с", "m/s") + "\n" + tr("Влажность", "Humidity") + " " + humidity + "%"
+            val text = signedTemp(temp) + "°\n" + weatherDescription(symbol)
             return WeatherInfo(text, icon)
         } finally { connection.disconnect() }
     }
 
     private fun fetchOpenMeteoWeather(location: WeatherLocation): WeatherInfo {
-        val url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.latitude + "&longitude=" + location.longitude + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=auto"
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=" + location.latitude + "&longitude=" + location.longitude + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&daily=weather_code,temperature_2m_min,temperature_2m_max&forecast_days=2&timezone=auto"
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
         }
@@ -749,9 +930,15 @@ class MainActivity : Activity() {
             }
             val isDay = current.optInt("is_day", 1) == 1
             val icon = weatherIconForCode(code, isDay)
-            val text = location.city + "   " + signedTemp(temp) + "°C\n" + desc + "  •  " + tr("Ощущается", "Feels like") + " " + feels +
-                "°C\n" + tr("Ветер", "Wind") + " " + wind + " " + tr("м/с", "m/s") + "  •  " + tr("Влажность", "Humidity") + " " + humidity + "%"
-            return WeatherInfo(text, icon)
+            val daily = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONObject("daily")
+            val tomorrowCode = daily?.optJSONArray("weather_code")?.optInt(1, 3) ?: 3
+            val tomorrowMin = daily?.optJSONArray("temperature_2m_min")?.optDouble(1, Double.NaN) ?: Double.NaN
+            val tomorrowMax = daily?.optJSONArray("temperature_2m_max")?.optDouble(1, Double.NaN) ?: Double.NaN
+            val tomorrowRange = if (!tomorrowMin.isNaN() && !tomorrowMax.isNaN())
+                signedTemp(tomorrowMin.toInt()) + "° — " + signedTemp(tomorrowMax.toInt()) + "°" else "—"
+            val tomorrowWeatherIcon = weatherIconForCode(tomorrowCode, true)
+            val text = signedTemp(temp) + "°\n" + desc
+            return WeatherInfo(text, icon, tomorrowRange, tomorrowWeatherIcon)
         } finally { connection.disconnect() }
     }
 
@@ -803,10 +990,12 @@ class MainActivity : Activity() {
             manager.isWifiEnabled && manager.connectionInfo?.supplicantState == android.net.wifi.SupplicantState.COMPLETED
         } catch (_: Exception) { false }
         val bluetooth = try { BluetoothAdapter.getDefaultAdapter()?.isEnabled == true } catch (_: Exception) { false }
-        wifiIcon.setImageDrawable(drawIcon("wifi", if (wifi) 0xFF38D9FF.toInt() else Color.WHITE))
-        btIcon.setImageDrawable(drawIcon("bluetooth", if (bluetooth) 0xFF38D9FF.toInt() else Color.WHITE))
-        wifiIcon.alpha = 1f
-        btIcon.alpha = 1f
+        wifiIcon.setImageDrawable(drawIcon("wifi", if (wifi) 0xFF8FEAFF.toInt() else Color.WHITE))
+        btIcon.setImageDrawable(drawIcon("bluetooth", if (bluetooth) 0xFF8FEAFF.toInt() else Color.WHITE))
+        wifiIndicator.text = "●"
+        btIndicator.text = "●"
+        wifiIndicator.setTextColor(if (wifi) 0xFF37E7A5.toInt() else 0xFF9A94B8.toInt())
+        btIndicator.setTextColor(if (bluetooth) 0xFF37E7A5.toInt() else 0xFF9A94B8.toInt())
     }
 
     private fun pickerBackground(focused: Boolean) = GradientDrawable().apply {
