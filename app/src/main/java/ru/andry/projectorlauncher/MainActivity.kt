@@ -302,7 +302,7 @@ class MainActivity : Activity() {
         }
         tomorrowRow.addView(tomorrowText)
         weather.addView(tomorrowRow, LinearLayout.LayoutParams(-1, dp(34)))
-        dashboard.addView(weather, LinearLayout.LayoutParams(dp(300), dp(190)))
+        dashboard.addView(weather, LinearLayout.LayoutParams(0, dp(190), 1f))
 
         val calendarCard = buildCalendarCard()
         dashboard.addView(calendarCard, LinearLayout.LayoutParams(0, dp(190), 1f).apply {
