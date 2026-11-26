@@ -57,7 +57,7 @@ class MainActivity : Activity() {
             if (!::clock.isInitialized) return
             val now = Date()
             clock.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
-            date.text = SimpleDateFormat("EEEE\nd MMMM", Locale.getDefault()).format(now)
+            date.text = SimpleDateFormat("EEEE\nd MMMM", Locale.getDefault()).format(now).uppercase(Locale.getDefault())
             updateNetwork()
             handler.postDelayed(this, 30_000)
         }
@@ -268,7 +268,7 @@ class MainActivity : Activity() {
         }
         currentWeatherRow.addView(weatherIcon, LinearLayout.LayoutParams(dp(66), dp(62)))
         weatherText = TextView(this).apply {
-            text = prefs.getString("weather_text", tr("Загрузка…", "Loading…")) ?: tr("Загрузка…", "Loading…")
+            text = tr("Загрузка…", "Loading…")
             textSize = 23f
             setTextColor(0xFF8FEAFF.toInt())
             gravity = Gravity.CENTER
@@ -295,7 +295,7 @@ class MainActivity : Activity() {
         }
         tomorrowRow.addView(tomorrowIcon)
         tomorrowText = TextView(this).apply {
-            text = prefs.getString("weather_tomorrow_text", "—")
+            text = "—"
             textSize = 17f
             setTextColor(0xFFF5F2FF.toInt())
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
@@ -524,12 +524,10 @@ class MainActivity : Activity() {
             alignmentMode = android.widget.GridLayout.ALIGN_BOUNDS
             useDefaultMargins = false
         }
-        val weekdays = arrayOf("П", "В", "С", "Ч", "П", "С", "В")
+        val weekdays = if (Locale.getDefault().language == "ru") arrayOf("П", "В", "С", "Ч", "П", "С", "В") else arrayOf("M", "T", "W", "T", "F", "S", "S")
         weekdays.forEach { day ->
             grid.addView(TextView(this).apply {
-                text = if (Locale.getDefault().language == "ru") day else when (day) {
-                    "П" -> "M"; "В" -> "T"; "С" -> "W"; "Ч" -> "T"; else -> "F"
-                }
+                text = day
                 textSize = 11f
                 gravity = Gravity.CENTER
                 setTextColor(0xFFC9C2E5.toInt())
@@ -916,7 +914,8 @@ class MainActivity : Activity() {
             connectTimeout = 10000; readTimeout = 10000; requestMethod = "GET"
         }
         try {
-            val current = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).getJSONObject("current")
+            val response = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            val current = response.getJSONObject("current")
             val temp = current.getDouble("temperature_2m").toInt()
             val feels = current.getDouble("apparent_temperature").toInt()
             val wind = current.getDouble("wind_speed_10m").toInt()
@@ -930,7 +929,7 @@ class MainActivity : Activity() {
             }
             val isDay = current.optInt("is_day", 1) == 1
             val icon = weatherIconForCode(code, isDay)
-            val daily = JSONObject(connection.inputStream.bufferedReader().use { it.readText() }).optJSONObject("daily")
+            val daily = response.optJSONObject("daily")
             val tomorrowCode = daily?.optJSONArray("weather_code")?.optInt(1, 3) ?: 3
             val tomorrowMin = daily?.optJSONArray("temperature_2m_min")?.optDouble(1, Double.NaN) ?: Double.NaN
             val tomorrowMax = daily?.optJSONArray("temperature_2m_max")?.optDouble(1, Double.NaN) ?: Double.NaN
