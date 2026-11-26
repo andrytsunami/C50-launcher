@@ -302,14 +302,14 @@ class MainActivity : Activity() {
         }
         tomorrowRow.addView(tomorrowText)
         weather.addView(tomorrowRow, LinearLayout.LayoutParams(-1, dp(34)))
-        dashboard.addView(weather, LinearLayout.LayoutParams(dp(160), dp(160)))
+        dashboard.addView(weather, LinearLayout.LayoutParams(dp(180), dp(180)))
 
         // Keep the two square cards anchored to opposite screen edges.
         dashboard.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
 
         val calendarCard = buildCalendarCard()
-        dashboard.addView(calendarCard, LinearLayout.LayoutParams(dp(160), dp(160)))
-        content.addView(dashboard, LinearLayout.LayoutParams(-1, dp(178)))
+        dashboard.addView(calendarCard, LinearLayout.LayoutParams(dp(180), dp(180)))
+        content.addView(dashboard, LinearLayout.LayoutParams(-1, dp(198)))
         page.addView(pageScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
