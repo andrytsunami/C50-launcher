@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Validate version
         env:
-          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
           if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -103,9 +103,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version || github.ref_name }}
+          tag_name: v${{ steps.version.outputs.value }}
           target_commitish: ${{ github.sha }}
-          name: ProjectorHome v${{ inputs.version || github.ref_name }}
+          name: ProjectorHome v${{ steps.version.outputs.value }}
           generate_release_notes: true
           make_latest: true
           files: ProjectorHome.apk
