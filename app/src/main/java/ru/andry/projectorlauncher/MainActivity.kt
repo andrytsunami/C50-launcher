@@ -288,7 +288,7 @@ class MainActivity : Activity() {
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
         })
         tomorrowIcon = TextView(this).apply {
-            text = "🌧️"
+            text = prefs.getString("weather_tomorrow_icon", "🌧️") ?: "🌧️"
             textSize = 22f
             gravity = Gravity.CENTER
             setPadding(dp(9), 0, dp(4), 0)
@@ -847,8 +847,7 @@ class MainActivity : Activity() {
                         .putString("weather_tomorrow_text", value.tomorrowText)
                         .putString("weather_tomorrow_icon", value.tomorrowIcon).apply()
                 } else {
-                    val cached = prefs.getString("weather_text", null)
-                    weatherText.text = cached ?: tr("Нет данных", "No data")
+                    weatherText.text = tr("Нет данных", "No data")
                     tomorrowText.text = prefs.getString("weather_tomorrow_text", "—") ?: "—"
                     tomorrowIcon.text = prefs.getString("weather_tomorrow_icon", "🌧️") ?: "🌧️"
                 }
@@ -1011,8 +1010,8 @@ class MainActivity : Activity() {
 
     private fun tileBackground(focused: Boolean, large: Boolean) = GradientDrawable().apply {
         cornerRadius = dp(if (large) 13 else 9).toFloat()
-        setColor(if (focused) 0x5536C9E8 else if (large) 0x66142C55 else 0x99202B49.toInt())
-        setStroke(dp(if (focused) 2 else 1), if (focused) 0xCCFFE36A.toInt() else 0x667FCBFF)
+        setColor(if (focused) 0x88564B9B.toInt() else if (large) 0xAA211C3D.toInt() else 0x99211D38.toInt())
+        setStroke(dp(if (focused) 2 else 1), if (focused) 0xCCFFFFFF.toInt() else 0x55FFFFFF)
     }
 
     private fun openClockApp() {
