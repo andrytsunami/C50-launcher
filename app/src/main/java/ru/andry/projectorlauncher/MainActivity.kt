@@ -232,14 +232,14 @@ class MainActivity : Activity() {
 
         val dashboard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.TOP
-            setPadding(0, dp(10), 0, 0)
+            gravity = Gravity.CENTER
+            setPadding(0, dp(8), 0, 0)
         }
         val weather = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             background = rounded(0x77332B69, 24, 0x44FFFFFF, 1)
-            setPadding(dp(18), dp(14), dp(18), dp(14))
+            setPadding(dp(10), dp(8), dp(10), dp(8))
             isFocusable = true
             isClickable = true
             contentDescription = tr("Обновить прогноз погоды", "Refresh weather forecast")
@@ -266,7 +266,7 @@ class MainActivity : Activity() {
             textSize = 43f
             gravity = Gravity.CENTER
         }
-        currentWeatherRow.addView(weatherIcon, LinearLayout.LayoutParams(dp(66), dp(62)))
+        currentWeatherRow.addView(weatherIcon, LinearLayout.LayoutParams(dp(48), dp(48)))
         weatherText = TextView(this).apply {
             text = tr("Загрузка…", "Loading…")
             textSize = 23f
@@ -305,10 +305,10 @@ class MainActivity : Activity() {
         dashboard.addView(weather, LinearLayout.LayoutParams(0, dp(190), 1f))
 
         val calendarCard = buildCalendarCard()
-        dashboard.addView(calendarCard, LinearLayout.LayoutParams(0, dp(190), 1f).apply {
+        dashboard.addView(calendarCard, LinearLayout.LayoutParams(dp(160), dp(160)).apply {
             leftMargin = dp(18)
         })
-        content.addView(dashboard, LinearLayout.LayoutParams(-1, dp(210)))
+        content.addView(dashboard, LinearLayout.LayoutParams(-1, dp(178)))
         page.addView(pageScroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(page, FrameLayout.LayoutParams(-1, -1))
 
@@ -508,16 +508,16 @@ class MainActivity : Activity() {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = rounded(0x77332B69, 24, 0x44FFFFFF, 1)
-            setPadding(dp(18), dp(12), dp(18), dp(10))
+            setPadding(dp(10), dp(8), dp(10), dp(8))
         }
         card.addView(TextView(this).apply {
             text = monthTitle.uppercase(Locale.getDefault())
-            textSize = 15f
+            textSize = 12f
             letterSpacing = 0.08f
             gravity = Gravity.CENTER
             setTextColor(0xFFF0EFFF.toInt())
             typeface = android.graphics.Typeface.create("sans-serif-medium", 0)
-        }, LinearLayout.LayoutParams(-1, dp(25)))
+        }, LinearLayout.LayoutParams(-1, dp(20)))
         val grid = android.widget.GridLayout(this).apply {
             columnCount = 7
             rowCount = 7
@@ -528,11 +528,11 @@ class MainActivity : Activity() {
         weekdays.forEach { day ->
             grid.addView(TextView(this).apply {
                 text = day
-                textSize = 11f
+                textSize = 9f
                 gravity = Gravity.CENTER
                 setTextColor(0xFFC9C2E5.toInt())
             }, android.widget.GridLayout.LayoutParams().apply {
-                width = 0; height = dp(20)
+                width = 0; height = dp(16)
                 columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
             })
         }
@@ -557,7 +557,7 @@ class MainActivity : Activity() {
                 }
             }
             grid.addView(dayView, android.widget.GridLayout.LayoutParams().apply {
-                width = 0; height = dp(17)
+                width = 0; height = dp(15)
                 columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
             })
         }
